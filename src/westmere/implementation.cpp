@@ -85,14 +85,35 @@ size_t avx512_utf8_to_utf32(const char* str, size_t len, char16_t* words) {
         //    (XXX: would passing `valid` mask speed things up?)
         const __m512i utf32 = avx512_utf8_to_utf32__aux__version3(input);
 
-        // 4. Pack only valid words
-        const __m512i out = _mm512_mask_compress_epi32(_mm512_setzero_si512(), valid, utf32);
+        const __mmask16 surrogate_pairs = _mm512_mask_cmpgt_epu32_mask(valid, utf32, _mm512_set1_epi32(0xffff));
+        if (simdutf_likely(surrogate_pairs == 0)) {
+            // 4. Pack only valid words
+            const __m512i out = _mm512_mask_compress_epi32(_mm512_setzero_si512(), valid, utf32);
 
-        // 5. Store them
-        _mm256_storeu_si256((__m256i*)output, _mm512_cvtepi32_epi16(out));
+            // 5. Store them
+            _mm256_storeu_si256((__m256i*)output, _mm512_cvtepi32_epi16(out));
 
-        output += valid_count;
-        ptr += 16;
+            output += valid_count;
+            ptr += 16;
+        } else {
+            // handle surrogate pairs: in an unefficient way
+            uint32_t buf[16];
+            _mm512_storeu_si512((__m512i*)buf, utf32);
+            int i = 0;
+            uint32_t mask = valid;
+            for (/**/; mask != 0; mask >>= 1, i++) {
+                if (mask & 1) {
+                    if (buf[i] < 0xffff)
+                        *output++ = buf[i];
+                    else {
+                        *output++ = (buf[i] >> 10) | 0xd800;
+                        *output++ = (buf[i] & 0x3ff) | 0xdc00;
+                    }
+                }
+            }
+
+            ptr += 16;
+        }
     }
     }
 
