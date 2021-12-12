@@ -13,7 +13,7 @@ using namespace simd;
 
 
 // AVX512 code
-__m512i avx512_utf8_to_utf32__aux__version3(__m512i utf8);
+#include "avx512.cpp"
 
 
 size_t avx512_utf8_to_utf32(const char* str, size_t len, char16_t* words) {
@@ -76,8 +76,8 @@ size_t avx512_utf8_to_utf32(const char* str, size_t len, char16_t* words) {
                We test if the 0th byte is not a continuation byte (0b10xxxxxx) */
         __mmask16 valid;
         {
-            const __m512i t0 = _mm512_and_si512(input, _mm512_set1_epi32(0xc0));
-            valid = _mm512_cmpneq_epu32_mask(t0, _mm512_set1_epi32(0x80));
+            const __m512i t0 = _mm512_and_si512(input, v_0000_00c0);
+            valid = _mm512_cmpneq_epu32_mask(t0, v_0000_0080);
         }
         const int valid_count = __builtin_popcount(valid);
 
@@ -122,7 +122,6 @@ size_t avx512_utf8_to_utf32(const char* str, size_t len, char16_t* words) {
     return output - words;
 }
 
-#include "avx512.cpp"
 // AVX512 end
 
 

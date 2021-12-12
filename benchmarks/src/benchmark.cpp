@@ -311,7 +311,7 @@ void Benchmark::run_validate_utf8(const simdutf::implementation& implementation,
 
     count_events(proc, iterations); // warming up!
     const auto result = count_events(proc, iterations);
-    //if((sink == false) && (iterations > 0)) { std::cerr << "The input was declared invalid.\n"; }
+    if((sink == false) && (iterations > 0)) { std::cerr << "The input was declared invalid.\n"; }
     size_t char_count = active_implementation->count_utf8(data, size);
     print_summary(result, size, char_count);
 }
@@ -351,7 +351,7 @@ void Benchmark::run_convert_utf8_to_utf16(const simdutf::implementation& impleme
     };
     count_events(proc, iterations); // warming up!
     const auto result = count_events(proc, iterations);
-    //if((sink == 0) && (size != 0) && (iterations > 0)) { std::cerr << "The output is zero which might indicate an error.\n"; }
+    if((sink == 0) && (size != 0) && (iterations > 0)) { std::cerr << "The output is zero which might indicate an error.\n"; }
     size_t char_count = active_implementation->count_utf8(data, size);
     print_summary(result, size, char_count);
 }
