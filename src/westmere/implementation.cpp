@@ -83,7 +83,7 @@ size_t avx512_utf8_to_utf32(const char* str, size_t len, char16_t* words) {
 
         // 3. Convert words into UCS-32
         //    (XXX: would passing `valid` mask speed things up?)
-        const __m512i utf32 = avx512_utf8_to_utf32__aux__version3(input);
+        const __m512i utf32 = avx512_utf8_to_utf32__aux__version5(input);
 
         const __mmask16 surrogate_pairs = _mm512_mask_cmpgt_epu32_mask(valid, utf32, _mm512_set1_epi32(0xffff));
         if (simdutf_likely(surrogate_pairs == 0)) {
@@ -184,7 +184,7 @@ simdutf_warn_unused bool implementation::validate_utf16(const char16_t *buf, siz
 }
 
 simdutf_warn_unused size_t implementation::convert_utf8_to_utf16(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
-  return avx512_validating_utf8_to_utf16(buf, len, utf16_output);
+  return avx512bw_validating_utf8_to_utf16(buf, len, utf16_output);
 }
 
 simdutf_warn_unused size_t implementation::convert_valid_utf8_to_utf16(const char* input, size_t size,
