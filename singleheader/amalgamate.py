@@ -2,7 +2,7 @@
 #
 # Creates the amalgamated source files.
 #
-
+import argparse
 import sys
 import os.path
 import subprocess
@@ -18,19 +18,90 @@ SCRIPTPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 PROJECTPATH = os.path.dirname(SCRIPTPATH)
 print(f"SCRIPTPATH={SCRIPTPATH} PROJECTPATH={PROJECTPATH}")
 
+known_features = {
+    'SIMDUTF_FEATURE_ASCII',
+    'SIMDUTF_FEATURE_BASE64',
+    'SIMDUTF_FEATURE_UTF8',
+    'SIMDUTF_FEATURE_UTF16',
+    'SIMDUTF_FEATURE_UTF32',
+}
+
+def parse_args():
+    p = argparse.ArgumentParser("SIMDUTF tool for amalgmation")
+    p.add_argument("--source-dir",
+                   metavar="SRC",
+                   help="Source dir")
+    p.add_argument("--include-dir",
+                   metavar="INC",
+                   help="Include dir")
+    p.add_argument("--output-dir",
+                   default='simdutf',
+                   metavar="DIR",
+                   help="Output directory")
+    p.add_argument("--no-zip",
+                   default=True,
+                   action='store_false',
+                   dest='zip',
+                   help="Do not create .zip file")
+    p.add_argument("--with-utf8",
+                   default=None,
+                   action='store_true',
+                   help="Include UTF-8 support")
+    p.add_argument("--with-utf16",
+                   default=None,
+                   action='store_true',
+                   help="Include UTF-16 support")
+    p.add_argument("--with-utf32",
+                   default=None,
+                   action='store_true',
+                   help="Include UTF-32 support")
+    p.add_argument("--with-base64",
+                   default=None,
+                   action='store_true',
+                   help="Include Base64 support")
+    
+    args = p.parse_args()
+    if args.with_utf8 or args.with_utf16 or args.with_utf32 or args.with_base64:
+        enabled_features = set()
+        if args.with_utf8:
+            enabled_features.add('SIMDUTF_FEATURE_UTF8')
+        if args.with_utf16:
+            enabled_features.add('SIMDUTF_FEATURE_UTF16')
+        if args.with_utf32:
+            enabled_features.add('SIMDUTF_FEATURE_UTF32')
+        if args.with_base64:
+            enabled_features.add('SIMDUTF_FEATURE_BASE64')
+    else:
+        enabled_features = set(known_features)
+
+    return (args, enabled_features)
+
+
+(args, enabled_features) = parse_args()
 
 print("We are about to amalgamate all simdutf files into one source file.")
 print("See https://www.sqlite.org/amalgamation.html and https://en.wikipedia.org/wiki/Single_Compilation_Unit for rationale.")
 if "AMALGAMATE_SOURCE_PATH" not in os.environ:
-    AMALGAMATE_SOURCE_PATH = os.path.join(PROJECTPATH, "src")
+    if args.source_dir is not None:
+        AMALGAMATE_SOURCE_PATH = args.source_dir
+    else:
+        AMALGAMATE_SOURCE_PATH = os.path.join(PROJECTPATH, "src")
 else:
     AMALGAMATE_SOURCE_PATH = os.environ["AMALGAMATE_SOURCE_PATH"]
+
 if "AMALGAMATE_INCLUDE_PATH" not in os.environ:
-    AMALGAMATE_INCLUDE_PATH = os.path.join(PROJECTPATH, "include")
+    if args.include_dir is not None:
+        AMALGAMATE_INCLUDE_PATH = args.include_dir
+    else:
+        AMALGAMATE_INCLUDE_PATH = os.path.join(PROJECTPATH, "include")
 else:
     AMALGAMATE_INCLUDE_PATH = os.environ["AMALGAMATE_INCLUDE_PATH"]
+
 if "AMALGAMATE_OUTPUT_PATH" not in os.environ:
-    AMALGAMATE_OUTPUT_PATH = os.path.join(SCRIPTPATH)
+    if args.output_dir is not None:
+        AMALGAMATE_OUTPUT_PATH = args.output_dir
+    else:
+        AMALGAMATE_OUTPUT_PATH = os.path.join(SCRIPTPATH)
 else:
     AMALGAMATE_OUTPUT_PATH = os.environ["AMALGAMATE_OUTPUT_PATH"]
 
@@ -64,7 +135,6 @@ def doinclude(fid, file, line):
             pass
     elif os.path.exists(pi):
         # generic includes are included multiple times
-        # generic includes are included multiple times
         if re.match('.*generic/.*.h', file):
             dofile(fid, AMALGAMATE_SOURCE_PATH, file)
         # begin/end_implementation are also included multiple times
@@ -87,13 +157,13 @@ def dofile(fid, prepath, filename):
     file = os.path.join(prepath, filename)
     RELFILE = os.path.relpath(file, PROJECTPATH)
     # Last lines are always ignored. Files should end by an empty lines.
+    #print(f"/* begin file {RELFILE} */")
     print(f"/* begin file {RELFILE} */", file=fid)
-    includepattern = re.compile(r'\s*#\s*include "(.*)"')
+    includepattern = re.compile(r'^\s*#\s*include "(.*)"')
     redefines_simdutf_implementation = re.compile(r'^#define\s+SIMDUTF_IMPLEMENTATION\s+(.*)')
     undefines_simdutf_implementation = re.compile(r'^#undef\s+SIMDUTF_IMPLEMENTATION\s*$')
     uses_simdutf_implementation = re.compile('SIMDUTF_IMPLEMENTATION([^_a-zA-Z0-9]|$)')
-    with open(file, 'r') as fid2:
-        for line in fid2:
+    for line in filter_features(file):
             line = line.rstrip('\n')
             s = includepattern.search(line)
             if s:
@@ -121,6 +191,78 @@ def dofile(fid, prepath, filename):
                     # copy the line, with SIMDUTF_IMPLEMENTATION replace to what it is currently defined to
                     print(uses_simdutf_implementation.sub(current_implementation+"\\1",line), file=fid)
     print(f"/* end file {RELFILE} */", file=fid)
+
+
+def filter_features(file):
+    """
+    Design:
+
+    * Feature macros SIMDUTF_FEATURE_foo must not be nested.
+    * All #endifs must contain a comment with the repeated condition.
+    """
+    current_features = None
+    start_if_line = None
+    enabled = True
+    prev_line = ''
+
+    root_header = file.endswith("/implementation.h")
+
+    with open(file, 'r') as f:
+        for (lineno, line) in enumerate(f, 1):
+            line = line.rstrip()
+            if root_header and line.startswith('#define SIMDUTF_FEATURE'):
+                # '#define SIMDUTF_FEATURE_FOO 1'
+                tmp = line.split()
+                assert len(tmp) == 3, line
+                assert tmp[2] == '1'
+                flag = tmp[1]
+
+                if flag in enabled_features:
+                    yield line
+                else:
+                    yield f'#define {flag} 0'
+
+            elif line.startswith('#if SIMDUTF_FEATURE'):
+                if start_if_line is not None:
+                    raise ValueError(f"{file}:{lineno}: feature block already opened at line {start_if_line}")
+
+                current_features = get_features(file, lineno, line[len('#if '):])
+                start_if_line = lineno
+                enabled = current_features.issubset(enabled_features)
+            elif line.startswith('#endif // SIMDUTF_FEATURE'):
+                if start_if_line is None:
+                    raise ValueError(f"{file}:{lineno}: feature block not opened, orphan #endif found")
+
+                features = get_features(line, lineno, line[len('#endif // '):])
+                if features != current_features:
+                    raise ValueError(f"{file}:{lineno}: feature #endif condition different than opening #if")
+
+                enabled = True
+                start_if_line = None
+                current_features = None
+            elif enabled:
+                if not prev_line.endswith('\\'):
+                    yield f"// {file}:{lineno}"
+
+                if line or (not line and prev_line):
+                    yield line
+
+                prev_line = line
+
+
+def get_features(file, lineno, line):
+    features = set()
+    for token in line.split():
+        if token == '&&':
+            continue
+
+        if token in known_features:
+            features.add(token)
+        else:
+            raise ValueError(f"{file}:{lineno}: unknown feature name '{token}'")
+
+    return features
+                
 
 
 # Get the generation date from git, so the output is reproducible.
@@ -164,11 +306,12 @@ if SCRIPTPATH != AMALGAMATE_OUTPUT_PATH:
   shutil.copy2(os.path.join(SCRIPTPATH,"amalgamation_demo.cpp"),AMALGAMATE_OUTPUT_PATH)
   shutil.copy2(os.path.join(SCRIPTPATH,"README.md"),AMALGAMATE_OUTPUT_PATH)
 
-import zipfile
-zf = zipfile.ZipFile(os.path.join(AMALGAMATE_OUTPUT_PATH,'singleheader.zip'), 'w', zipfile.ZIP_DEFLATED)
-zf.write(os.path.join(AMALGAMATE_OUTPUT_PATH,"simdutf.cpp"), "simdutf.cpp")
-zf.write(os.path.join(AMALGAMATE_OUTPUT_PATH,"simdutf.h"), "simdutf.h")
-zf.write(os.path.join(AMALGAMATE_OUTPUT_PATH,"amalgamation_demo.cpp"), "amalgamation_demo.cpp")
+if args.zip:
+    import zipfile
+    zf = zipfile.ZipFile(os.path.join(AMALGAMATE_OUTPUT_PATH,'singleheader.zip'), 'w', zipfile.ZIP_DEFLATED)
+    zf.write(AMAL_C,  "simdutf.cpp")
+    zf.write(AMAL_H,  "simdutf.h")
+    zf.write(DEMOCPP, "amalgamation_demo.cpp")
 
 
 print("Done with all files generation.")
