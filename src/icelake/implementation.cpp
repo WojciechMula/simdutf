@@ -69,9 +69,9 @@ namespace {
 #if SIMDUTF_FEATURE_ASCII
 #include "icelake/icelake_ascii_validation.inl.cpp"
 #endif // SIMDUTF_FEATURE_ASCII
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 #include "icelake/icelake_utf32_validation.inl.cpp"
-#endif // SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 #if SIMDUTF_FEATURE_UTF8
 #include "icelake/icelake_convert_latin1_to_utf8.inl.cpp"
 #endif // SIMDUTF_FEATURE_UTF8
@@ -173,7 +173,7 @@ implementation::detect_encodings(const char *input,
   return out;
 }
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
 simdutf_warn_unused bool
 implementation::validate_utf8(const char *buf, size_t len) const noexcept {
   if (simdutf_unlikely(len == 0)) {
@@ -194,7 +194,9 @@ implementation::validate_utf8(const char *buf, size_t len) const noexcept {
   checker.check_eof();
   return !checker.errors();
 }
+#endif // SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF8
 simdutf_warn_unused result implementation::validate_utf8_with_errors(
     const char *buf, size_t len) const noexcept {
   if (simdutf_unlikely(len == 0)) {
@@ -271,7 +273,7 @@ simdutf_warn_unused result implementation::validate_ascii_with_errors(
 }
 #endif // SIMDUTF_FEATURE_ASCII
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
 simdutf_warn_unused bool
 implementation::validate_utf16le(const char16_t *buf,
                                  size_t len) const noexcept {
@@ -319,7 +321,9 @@ implementation::validate_utf16le(const char16_t *buf,
   }
   return true;
 }
+#endif // SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF16
 simdutf_warn_unused bool
 implementation::validate_utf16be(const char16_t *buf,
                                  size_t len) const noexcept {
@@ -494,12 +498,14 @@ simdutf_warn_unused result implementation::validate_utf16be_with_errors(
 }
 #endif // SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 simdutf_warn_unused bool
 implementation::validate_utf32(const char32_t *buf, size_t len) const noexcept {
   return icelake::validate_utf32(buf, len);
 }
+#endif // SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF32
 simdutf_warn_unused result implementation::validate_utf32_with_errors(
     const char32_t *buf, size_t len) const noexcept {
   const char32_t *buf_orig = buf;

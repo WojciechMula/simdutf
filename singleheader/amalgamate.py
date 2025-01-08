@@ -19,6 +19,8 @@ PROJECTPATH = os.path.dirname(SCRIPTPATH)
 print(f"SCRIPTPATH={SCRIPTPATH} PROJECTPATH={PROJECTPATH}")
 
 known_features = {
+    'SIMDUTF_FEATURE_DETECT_ENCODING',
+    'SIMDUTF_FEATURE_LATIN1',
     'SIMDUTF_FEATURE_ASCII',
     'SIMDUTF_FEATURE_BASE64',
     'SIMDUTF_FEATURE_UTF8',
@@ -43,6 +45,11 @@ def parse_args():
                    action='store_false',
                    dest='zip',
                    help="Do not create .zip file")
+    p.add_argument("--no-readme",
+                   default=True,
+                   action='store_false',
+                   dest='readme',
+                   help="Do not show readme after creating files")
     p.add_argument("--with-utf8",
                    default=None,
                    action='store_true',
@@ -59,19 +66,38 @@ def parse_args():
                    default=None,
                    action='store_true',
                    help="Include Base64 support")
+    p.add_argument("--with-detect-enc",
+                   default=None,
+                   action='store_true',
+                   help="Include encoding detection support")
+    p.add_argument("--with-ascii",
+                   default=None,
+                   action='store_true',
+                   help="Include ASCII support")
+    p.add_argument("--with-latin1",
+                   default=None,
+                   action='store_true',
+                   help="Include Latin1 support")
     
     args = p.parse_args()
-    if args.with_utf8 or args.with_utf16 or args.with_utf32 or args.with_base64:
-        enabled_features = set()
-        if args.with_utf8:
-            enabled_features.add('SIMDUTF_FEATURE_UTF8')
-        if args.with_utf16:
-            enabled_features.add('SIMDUTF_FEATURE_UTF16')
-        if args.with_utf32:
-            enabled_features.add('SIMDUTF_FEATURE_UTF32')
-        if args.with_base64:
-            enabled_features.add('SIMDUTF_FEATURE_BASE64')
-    else:
+
+    enabled_features = set()
+    if args.with_utf8:
+        enabled_features.add('SIMDUTF_FEATURE_UTF8')
+    if args.with_utf16:
+        enabled_features.add('SIMDUTF_FEATURE_UTF16')
+    if args.with_utf32:
+        enabled_features.add('SIMDUTF_FEATURE_UTF32')
+    if args.with_base64:
+        enabled_features.add('SIMDUTF_FEATURE_BASE64')
+    if args.with_detect_enc:
+        enabled_features.add('SIMDUTF_FEATURE_DETECT_ENCODING')
+    if args.with_ascii:
+        enabled_features.add('SIMDUTF_FEATURE_ASCII')
+    if args.with_latin1:
+        enabled_features.add('SIMDUTF_FEATURE_LATIN1')
+
+    if not enabled_features:
         enabled_features = set(known_features)
 
     return (args, enabled_features)
@@ -201,6 +227,7 @@ def filter_features(file):
     * All #endifs must contain a comment with the repeated condition.
     """
     current_features = None
+    current_kind = None
     start_if_line = None
     enabled = True
     prev_line = ''
@@ -226,15 +253,20 @@ def filter_features(file):
                 if start_if_line is not None:
                     raise ValueError(f"{file}:{lineno}: feature block already opened at line {start_if_line}")
 
-                current_features = get_features(file, lineno, line[len('#if '):])
+                current_kind, current_features = get_features(file, lineno, line[len('#if '):])
                 start_if_line = lineno
-                enabled = current_features.issubset(enabled_features)
+                if current_kind == ALL_SET:
+                    enabled = current_features.issubset(enabled_features)
+                elif current_kind == ANY_SET:
+                    enabled = bool(current_features & enabled_features)
+                else:
+                    assert False, kind
             elif line.startswith('#endif // SIMDUTF_FEATURE'):
                 if start_if_line is None:
                     raise ValueError(f"{file}:{lineno}: feature block not opened, orphan #endif found")
 
-                features = get_features(line, lineno, line[len('#endif // '):])
-                if features != current_features:
+                res = get_features(line, lineno, line[len('#endif // '):])
+                if res != (current_kind, current_features):
                     raise ValueError(f"{file}:{lineno}: feature #endif condition different than opening #if")
 
                 enabled = True
@@ -250,10 +282,24 @@ def filter_features(file):
                 prev_line = line
 
 
+ALL_SET = 'all'
+ANY_SET = 'any'
+
 def get_features(file, lineno, line):
+    typ = None
     features = set()
     for token in line.split():
         if token == '&&':
+            if typ is None:
+                typ = ALL_SET
+            elif typ != ALL_SET:
+                raise ValueError
+            continue
+        elif token == '||':
+            if typ is None:
+                typ = ANY_SET
+            elif typ != ANY_SET:
+                raise ValueError
             continue
 
         if token in known_features:
@@ -261,7 +307,10 @@ def get_features(file, lineno, line):
         else:
             raise ValueError(f"{file}:{lineno}: unknown feature name '{token}'")
 
-    return features
+    if typ is None:
+        typ = ALL_SET
+
+    return typ, features
                 
 
 
@@ -319,12 +368,8 @@ print("Done with all files generation.")
 print(f"Files have been written to directory: {AMALGAMATE_OUTPUT_PATH}/")
 print("Done with all files generation.")
 
-
-#
-# Instructions to create demo
-#
-
-print("\nGiving final instructions:")
-with open(README) as r:
-    for line in r:
-        print(line)
+if args.readme:
+    print("\nGiving final instructions:")
+    with open(README) as r:
+        for line in r:
+            print(line)

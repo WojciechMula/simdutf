@@ -83,6 +83,7 @@ concept output_span_of_byte_like = requires(T &t) {
 } // namespace detail
 #endif
 
+#if SIMDUTF_FEATURE_DETECT_ENCODING
 /**
  * Autodetect the encoding of the input, a single encoding is recommended.
  * E.g., the function might return simdutf::encoding_type::UTF8,
@@ -143,8 +144,9 @@ detect_encodings(const detail::input_span_of_byte_like auto &input) noexcept {
                           input.size());
 }
 #endif
+#endif // SIMDUTF_FEATURE_DETECT_ENCODING
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
 /**
  * Validate the UTF-8 string. This function may be best when you expect
  * the input to be almost always valid. Otherwise, consider using
@@ -164,7 +166,9 @@ validate_utf8(const detail::input_span_of_byte_like auto &input) noexcept {
                        input.size());
 }
 #endif
+#endif // SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF8
 /**
  * Validate the UTF-8 string and stop on error.
  *
@@ -254,7 +258,9 @@ validate_utf16(std::span<const char16_t> input) noexcept {
   return validate_utf16(input.data(), input.size());
 }
 #endif
+#endif // SIMDUTF_FEATURE_UTF16
 
+#if SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
 /**
  * Validate the UTF-16LE string. This function may be best when you expect
  * the input to be almost always valid. Otherwise, consider using
@@ -277,7 +283,9 @@ validate_utf16le(std::span<const char16_t> input) noexcept {
   return validate_utf16le(input.data(), input.size());
 }
 #endif
+#endif // SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF16
 /**
  * Validate the UTF-16BE string. This function may be best when you expect
  * the input to be almost always valid. Otherwise, consider using
@@ -378,7 +386,7 @@ validate_utf16be_with_errors(std::span<const char16_t> input) noexcept {
 #endif
 #endif // SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 /**
  * Validate the UTF-32 string. This function may be best when you expect
  * the input to be almost always valid. Otherwise, consider using
@@ -401,7 +409,9 @@ validate_utf32(std::span<const char32_t> input) noexcept {
   return validate_utf32(input.data(), input.size());
 }
 #endif
+#endif // SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF32
 /**
  * Validate the UTF-32 string and stop on error. It might be faster than
  * validate_utf32 when an error is expected to occur early.
@@ -428,7 +438,7 @@ validate_utf32_with_errors(std::span<const char32_t> input) noexcept {
 #endif
 #endif // SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert Latin1 string into UTF8 string.
  *
@@ -481,9 +491,9 @@ simdutf_really_inline simdutf_warn_unused size_t convert_latin1_to_utf8_safe(
       utf8_output.size());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert possibly Latin1 string into UTF-16LE string.
  *
@@ -526,9 +536,9 @@ convert_latin1_to_utf16be(const detail::input_span_of_byte_like auto &input,
                                    input.size(), output.data());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert Latin1 string into UTF-32 string.
  *
@@ -550,9 +560,9 @@ simdutf_really_inline simdutf_warn_unused size_t convert_latin1_to_utf32(
       utf32_output.data());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert possibly broken UTF-8 string into latin1 string.
  *
@@ -577,7 +587,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_utf8_to_latin1(
                                 reinterpret_cast<char *>(output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -605,7 +615,7 @@ convert_utf8_to_utf16(const detail::input_span_of_byte_like auto &input,
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Using native endianness, convert a Latin1 string into a UTF-16 string.
  *
@@ -624,7 +634,7 @@ convert_latin1_to_utf16(const detail::input_span_of_byte_like auto &input,
                                  input.size(), output.data());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -676,7 +686,7 @@ convert_utf8_to_utf16be(const detail::input_span_of_byte_like auto &utf8_input,
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert possibly broken UTF-8 string into latin1 string with errors.
  * If the string cannot be represented as Latin1, an error
@@ -705,7 +715,7 @@ convert_utf8_to_latin1_with_errors(
       reinterpret_cast<char *>(latin1_output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -844,7 +854,7 @@ convert_utf8_to_utf32_with_errors(
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert valid UTF-8 string into latin1 string.
  *
@@ -875,7 +885,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_valid_utf8_to_latin1(
       valid_utf8_input.size(), latin1_output.data());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -969,7 +979,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_valid_utf8_to_utf32(
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 /**
  * Return the number of bytes that this Latin1 string would require in UTF-8
  * format.
@@ -1011,7 +1021,7 @@ simdutf_really_inline simdutf_warn_unused size_t latin1_length_from_utf8(
       valid_utf8_input.size());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -1098,7 +1108,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_utf16_to_utf8(
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Using native endianness, convert possibly broken UTF-16 string into Latin1
  * string.
@@ -1179,7 +1189,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_utf16be_to_latin1(
       reinterpret_cast<char *>(latin1_output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -1235,7 +1245,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_utf16be_to_utf8(
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Using native endianness, convert possibly broken UTF-16 string into Latin1
  * string.
@@ -1322,7 +1332,7 @@ convert_utf16be_to_latin1_with_errors(
       reinterpret_cast<char *>(latin1_output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -1439,7 +1449,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_valid_utf16_to_utf8(
 #endif
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Using native endianness, convert UTF-16 string into Latin1 string.
  *
@@ -1534,7 +1544,7 @@ convert_valid_utf16be_to_latin1(
       reinterpret_cast<char *>(latin1_output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -1824,7 +1834,7 @@ convert_valid_utf16be_to_utf32(std::span<const char16_t> valid_utf16_input,
 #endif
 #endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 /**
  * Compute the number of bytes that this UTF-16LE/BE string would require in
  * Latin1 format.
@@ -1859,7 +1869,7 @@ utf8_length_from_utf16(std::span<const char16_t> valid_utf16_input) noexcept {
                                 valid_utf16_input.size());
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 /**
@@ -2037,7 +2047,7 @@ convert_utf32_to_utf16le(std::span<const char32_t> utf32_input,
 #endif
 #endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 /**
  * Convert possibly broken UTF-32 string into Latin1 string.
  *
@@ -2125,7 +2135,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_valid_utf32_to_latin1(
       reinterpret_cast<char *>(latin1_output.data()));
 }
 #endif
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
 /**
@@ -3052,6 +3062,7 @@ public:
    */
   bool supported_by_runtime_system() const;
 
+#if SIMDUTF_FEATURE_DETECT_ENCODING
   /**
    * This function will try to detect the encoding
    * @param input the string to identify
@@ -3069,6 +3080,7 @@ public:
    */
   virtual int detect_encodings(const char *input,
                                size_t length) const noexcept = 0;
+#endif // SIMDUTF_FEATURE_DETECT_ENCODING
 
   /**
    * @private For internal implementation use
@@ -3081,7 +3093,7 @@ public:
     return _required_instruction_sets;
   }
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
   /**
    * Validate the UTF-8 string.
    *
@@ -3093,6 +3105,9 @@ public:
    */
   simdutf_warn_unused virtual bool validate_utf8(const char *buf,
                                                  size_t len) const noexcept = 0;
+#endif // SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
+
+#if SIMDUTF_FEATURE_UTF8
   /**
    * Validate the UTF-8 string and stop on errors.
    *
@@ -3138,7 +3153,7 @@ public:
   validate_ascii_with_errors(const char *buf, size_t len) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_ASCII
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
   /**
    * Validate the UTF-16LE string.This function may be best when you expect
    * the input to be almost always valid. Otherwise, consider using
@@ -3155,7 +3170,9 @@ public:
    */
   simdutf_warn_unused virtual bool
   validate_utf16le(const char16_t *buf, size_t len) const noexcept = 0;
+#endif // SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF16
   /**
    * Validate the UTF-16BE string. This function may be best when you expect
    * the input to be almost always valid. Otherwise, consider using
@@ -3214,7 +3231,7 @@ public:
                                size_t len) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
   /**
    * Validate the UTF-32 string.
    *
@@ -3229,7 +3246,9 @@ public:
    */
   simdutf_warn_unused virtual bool
   validate_utf32(const char32_t *buf, size_t len) const noexcept = 0;
+#endif // SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
 
+#if SIMDUTF_FEATURE_UTF32
   /**
    * Validate the UTF-32 string and stop on error.
    *
@@ -3250,7 +3269,7 @@ public:
                              size_t len) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert Latin1 string into UTF8 string.
    *
@@ -3264,9 +3283,9 @@ public:
   simdutf_warn_unused virtual size_t
   convert_latin1_to_utf8(const char *input, size_t length,
                          char *utf8_output) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert possibly Latin1 string into UTF-16LE string.
    *
@@ -3294,9 +3313,9 @@ public:
   simdutf_warn_unused virtual size_t
   convert_latin1_to_utf16be(const char *input, size_t length,
                             char16_t *utf16_output) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert Latin1 string into UTF-32 string.
    *
@@ -3310,9 +3329,9 @@ public:
   simdutf_warn_unused virtual size_t
   convert_latin1_to_utf32(const char *input, size_t length,
                           char32_t *utf32_buffer) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert possibly broken UTF-8 string into latin1 string.
    *
@@ -3371,7 +3390,7 @@ public:
   simdutf_warn_unused virtual size_t
   convert_valid_utf8_to_latin1(const char *input, size_t length,
                                char *latin1_output) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
   /**
@@ -3563,7 +3582,7 @@ public:
   utf32_length_from_utf8(const char *input, size_t length) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert possibly broken UTF-16LE string into Latin1 string.
    *
@@ -3697,7 +3716,7 @@ public:
   simdutf_warn_unused virtual size_t
   convert_valid_utf16be_to_latin1(const char16_t *input, size_t length,
                                   char *latin1_buffer) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
   /**
@@ -3977,7 +3996,7 @@ public:
                            size_t length) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert possibly broken UTF-32 string into Latin1 string.
    *
@@ -3997,9 +4016,9 @@ public:
   simdutf_warn_unused virtual size_t
   convert_utf32_to_latin1(const char32_t *input, size_t length,
                           char *latin1_buffer) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   /**
    * Convert possibly broken UTF-32 string into Latin1 string and stop on error.
    * If the string cannot be represented as Latin1, an error is returned.
@@ -4046,7 +4065,7 @@ public:
   simdutf_warn_unused virtual size_t
   convert_valid_utf32_to_latin1(const char32_t *input, size_t length,
                                 char *latin1_buffer) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
   /**
@@ -4108,7 +4127,7 @@ public:
                               char *utf8_buffer) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
   /**
    * Return the number of bytes that this UTF-16 string would require in Latin1
    * format.
@@ -4121,7 +4140,7 @@ public:
    */
   simdutf_warn_unused virtual size_t
   utf16_length_from_latin1(size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
   /**
@@ -4262,7 +4281,7 @@ public:
                                        char16_t *output) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
   /**
    * Return the number of bytes that this Latin1 string would require in UTF-8
    * format.
@@ -4273,7 +4292,7 @@ public:
    */
   simdutf_warn_unused virtual size_t
   utf8_length_from_latin1(const char *input, size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
   /**
@@ -4293,7 +4312,7 @@ public:
                          size_t length) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   /**
    * Compute the number of bytes that this UTF-32 string would require in Latin1
    * format.
@@ -4307,9 +4326,9 @@ public:
    */
   simdutf_warn_unused virtual size_t
   latin1_length_from_utf32(size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
   /**
    * Compute the number of bytes that this UTF-8 string would require in Latin1
    * format.
@@ -4323,9 +4342,9 @@ public:
    */
   simdutf_warn_unused virtual size_t
   latin1_length_from_utf8(const char *input, size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF8
+#endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
   /**
    * Compute the number of bytes that this UTF-16LE/BE string would require in
    * Latin1 format.
@@ -4343,7 +4362,7 @@ public:
    */
   simdutf_warn_unused virtual size_t
   latin1_length_from_utf16(size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF16
+#endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
   /**
@@ -4363,7 +4382,7 @@ public:
                           size_t length) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   /**
    * Return the number of bytes that this UTF-32 string would require in Latin1
    * format.
@@ -4375,7 +4394,7 @@ public:
    */
   simdutf_warn_unused virtual size_t
   utf32_length_from_latin1(size_t length) const noexcept = 0;
-#endif // SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_UTF32
   /**

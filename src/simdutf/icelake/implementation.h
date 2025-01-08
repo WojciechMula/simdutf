@@ -26,9 +26,12 @@ public:
                 internal::instruction_set::AVX512VPOPCNTDQ) {}
   simdutf_warn_unused int detect_encodings(const char *input,
                                            size_t length) const noexcept final;
-#if SIMDUTF_FEATURE_UTF8
+#if SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
   simdutf_warn_unused bool validate_utf8(const char *buf,
                                          size_t len) const noexcept final;
+#endif // SIMDUTF_FEATURE_UTF8 || SIMDUTF_FEATURE_DETECT_ENCODING
+
+#if SIMDUTF_FEATURE_UTF8
   simdutf_warn_unused result
   validate_utf8_with_errors(const char *buf, size_t len) const noexcept final;
 #endif // SIMDUTF_FEATURE_UTF8
@@ -40,9 +43,12 @@ public:
   validate_ascii_with_errors(const char *buf, size_t len) const noexcept final;
 #endif // SIMDUTF_FEATURE_ASCII
 
-#if SIMDUTF_FEATURE_UTF16
+#if SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
   simdutf_warn_unused bool validate_utf16le(const char16_t *buf,
                                             size_t len) const noexcept final;
+#endif // SIMDUTF_FEATURE_UTF16 || SIMDUTF_FEATURE_DETECT_ENCODING
+
+#if SIMDUTF_FEATURE_UTF16
   simdutf_warn_unused bool validate_utf16be(const char16_t *buf,
                                             size_t len) const noexcept final;
   simdutf_warn_unused result validate_utf16le_with_errors(
@@ -51,9 +57,12 @@ public:
       const char16_t *buf, size_t len) const noexcept final;
 #endif // SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
   simdutf_warn_unused bool validate_utf32(const char32_t *buf,
                                           size_t len) const noexcept final;
+#endif // SIMDUTF_FEATURE_UTF32 || SIMDUTF_FEATURE_DETECT_ENCODING
+
+#if SIMDUTF_FEATURE_UTF32
   simdutf_warn_unused result validate_utf32_with_errors(
       const char32_t *buf, size_t len) const noexcept final;
 #endif // SIMDUTF_FEATURE_UTF32
