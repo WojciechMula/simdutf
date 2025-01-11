@@ -227,7 +227,6 @@ def filter_features(file):
     * All #endifs must contain a comment with the repeated condition.
     """
     current_features = None
-    current_kind = None
     start_if_line = None
     enabled = True
     prev_line = ''
@@ -253,20 +252,15 @@ def filter_features(file):
                 if start_if_line is not None:
                     raise ValueError(f"{file}:{lineno}: feature block already opened at line {start_if_line}")
 
-                current_kind, current_features = get_features(file, lineno, line[len('#if '):])
+                current_features = get_features(file, lineno, line[len('#if '):])
                 start_if_line = lineno
-                if current_kind == ALL_SET:
-                    enabled = current_features.issubset(enabled_features)
-                elif current_kind == ANY_SET:
-                    enabled = bool(current_features & enabled_features)
-                else:
-                    assert False, kind
+                enabled = current_features.evaluate(enabled_features)
             elif line.startswith('#endif // SIMDUTF_FEATURE'):
                 if start_if_line is None:
                     raise ValueError(f"{file}:{lineno}: feature block not opened, orphan #endif found")
 
-                res = get_features(line, lineno, line[len('#endif // '):])
-                if res != (current_kind, current_features):
+                features = get_features(line, lineno, line[len('#endif // '):])
+                if str(features) != str(current_features):
                     raise ValueError(f"{file}:{lineno}: feature #endif condition different than opening #if")
 
                 enabled = True
@@ -282,36 +276,84 @@ def filter_features(file):
                 prev_line = line
 
 
-ALL_SET = 'all'
-ANY_SET = 'any'
-
 def get_features(file, lineno, line):
-    typ = None
-    features = set()
-    for token in line.split():
-        if token == '&&':
-            if typ is None:
-                typ = ALL_SET
-            elif typ != ALL_SET:
-                raise ValueError
-            continue
-        elif token == '||':
-            if typ is None:
-                typ = ANY_SET
-            elif typ != ANY_SET:
-                raise ValueError
-            continue
+    try:
+        return parse_condition(line)
+    except e:
+        raise ValueError(f"{file}:{lineno}: {e}")
+        
 
-        if token in known_features:
-            features.add(token)
-        else:
-            raise ValueError(f"{file}:{lineno}: unknown feature name '{token}'")
+class Token:
+    def __init__(self, name):
+        if name not in known_features:
+            raise ValueError("unknown feature name '{name}'")
 
-    if typ is None:
-        typ = ALL_SET
+        self.name = name
 
-    return typ, features
-                
+    def evaluate(self, enabled_features):
+        return self.name in enabled_features
+
+    def __str__(self):
+        return self.name
+
+
+class And:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def evaluate(self, enabled_features):
+        a = self.a.evaluate(enabled_features)
+        b = self.b.evaluate(enabled_features)
+
+        return a and b
+
+    def __str__(self):
+        return '(%s && %s)' % (self.a, self.b)
+
+
+class Or:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def evaluate(self, enabled_features):
+        a = self.a.evaluate(enabled_features)
+        b = self.b.evaluate(enabled_features)
+
+        return a or b
+
+    def __str__(self):
+        return '(%s || %s)' % (self.a, self.b)
+
+
+def parse_condition(s):
+    tokens = [t for t in re.split('( |\\(|\\)|&&|\\|\\|)', s) if t not in ('', ' ')]
+
+    # Note: this is plain pattern matching, nothing generic
+    if len(tokens) == 1:
+        return Token(tokens[0])
+
+    if len(tokens) == 3:
+        if tokens[1] == '&&':
+            a = Token(tokens[0])
+            b = Token(tokens[2])
+            return And(a, b)
+
+        if tokens[1] == '||':
+            a = Token(tokens[0])
+            b = Token(tokens[2])
+            return Or(a, b)
+
+    if len(tokens) == 7:
+        if tokens[1] == '&&' and tokens[2] == '(' and tokens[4] == '||' and tokens[6] == ')':
+            a = Token(tokens[0])
+            b = Token(tokens[3])
+            c = Token(tokens[5])
+
+            return And(a, Or(b, c))
+
+    raise ValueError("cannot parse '{line}'")
 
 
 # Get the generation date from git, so the output is reproducible.

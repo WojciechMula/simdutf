@@ -30,7 +30,7 @@ template <typename T> std::string toBinaryString(T b) {
 
 // Implementations
 // The best choice should always come first!
-//#include "simdutf/arm64.h"
+#include "simdutf/arm64.h"
 //#include "simdutf/icelake.h"
 #include "simdutf/haswell.h"
 #include "simdutf/westmere.h"

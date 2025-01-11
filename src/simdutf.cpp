@@ -106,7 +106,7 @@ SIMDUTF_DISABLE_UNDESIRED_WARNINGS
   #include "fallback/implementation.cpp"
 #endif
 #if SIMDUTF_IMPLEMENTATION_ICELAKE
-  //#include "icelake/implementation.cpp"
+  #include "icelake/implementation.cpp"
 #endif
 #if SIMDUTF_IMPLEMENTATION_HASWELL
   #include "haswell/implementation.cpp"
