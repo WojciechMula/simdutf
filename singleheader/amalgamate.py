@@ -267,8 +267,8 @@ def filter_features(file):
                 start_if_line = None
                 current_features = None
             elif enabled:
-                if not prev_line.endswith('\\'):
-                    yield f"// {file}:{lineno}"
+                #if not prev_line.endswith('\\'):
+                #    yield f"// {file}:{lineno}"
 
                 if line or (not line and prev_line):
                     yield line

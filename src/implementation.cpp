@@ -34,9 +34,9 @@ template <typename T> std::string toBinaryString(T b) {
 //#include "simdutf/icelake.h"
 #include "simdutf/haswell.h"
 #include "simdutf/westmere.h"
-//#include "simdutf/ppc64.h"
+#include "simdutf/ppc64.h"
 //#include "simdutf/rvv.h"
-//#include "simdutf/lsx.h"
+#include "simdutf/lsx.h"
 //#include "simdutf/lasx.h"
 #include "simdutf/fallback.h" // have it always last.
 
@@ -140,10 +140,10 @@ static const arm64::implementation *get_arm64_singleton() {
 }
 #endif
 #if SIMDUTF_IMPLEMENTATION_PPC64
-//static const ppc64::implementation *get_ppc64_singleton() {
-//  static const ppc64::implementation ppc64_singleton{};
-//  return &ppc64_singleton;
-//}
+static const ppc64::implementation *get_ppc64_singleton() {
+  static const ppc64::implementation ppc64_singleton{};
+  return &ppc64_singleton;
+}
 #endif
 #if SIMDUTF_IMPLEMENTATION_RVV
 //static const rvv::implementation *get_rvv_singleton() {
@@ -152,10 +152,10 @@ static const arm64::implementation *get_arm64_singleton() {
 //}
 #endif
 #if SIMDUTF_IMPLEMENTATION_LSX
-//static const lsx::implementation *get_lsx_singleton() {
-//  static const lsx::implementation lsx_singleton{};
-//  return &lsx_singleton;
-//}
+static const lsx::implementation *get_lsx_singleton() {
+  static const lsx::implementation lsx_singleton{};
+  return &lsx_singleton;
+}
 #endif
 #if SIMDUTF_IMPLEMENTATION_LASX
 //static const lasx::implementation *get_lasx_singleton() {
@@ -177,25 +177,25 @@ static const implementation *get_single_implementation() {
       get_icelake_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_HASWELL
-  get_haswell_singleton();
+    get_haswell_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_WESTMERE
-  get_westmere_singleton();
+    get_westmere_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_ARM64
-  get_arm64_singleton();
+    get_arm64_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_PPC64
-  get_ppc64_singleton();
+    get_ppc64_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_LSX
-  get_lsx_singleton();
+    get_lsx_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_LASX
-  get_lasx_singleton();
+    get_lasx_singleton();
   #endif
   #if SIMDUTF_IMPLEMENTATION_FALLBACK
-  get_fallback_singleton();
+    get_fallback_singleton();
   #endif
 }
 #endif

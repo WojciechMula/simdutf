@@ -1,3 +1,4 @@
+#error "HERAAA"
 #ifndef SIMDUTF_UTF16_H
 #define SIMDUTF_UTF16_H
 

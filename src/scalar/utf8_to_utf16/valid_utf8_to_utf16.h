@@ -1,3 +1,7 @@
+#ifdef SIMDUTF_UTF16_H
+#error "HRE"
+#endif
+
 #ifndef SIMDUTF_VALID_UTF8_TO_UTF16_H
 #define SIMDUTF_VALID_UTF8_TO_UTF16_H
 
@@ -9,6 +13,7 @@ namespace utf8_to_utf16 {
 template <endianness big_endian>
 inline size_t convert_valid(const char *buf, size_t len,
                             char16_t *utf16_output) {
+    utf16::swap_bytes();
   const uint8_t *data = reinterpret_cast<const uint8_t *>(buf);
   size_t pos = 0;
   char16_t *start{utf16_output};
