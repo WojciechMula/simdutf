@@ -134,10 +134,10 @@ static const westmere::implementation *get_westmere_singleton() {
 }
 #endif
 #if SIMDUTF_IMPLEMENTATION_ARM64
-//static const arm64::implementation *get_arm64_singleton() {
-//  static const arm64::implementation arm64_singleton{};
-// return &arm64_singleton;
-//}
+static const arm64::implementation *get_arm64_singleton() {
+  static const arm64::implementation arm64_singleton{};
+ return &arm64_singleton;
+}
 #endif
 #if SIMDUTF_IMPLEMENTATION_PPC64
 //static const ppc64::implementation *get_ppc64_singleton() {
