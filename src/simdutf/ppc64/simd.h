@@ -106,6 +106,10 @@ simdutf_really_inline vector_u8 as_vector_u8(const simd16<bool> v) {
   return vector_u8::vector_type(v.value);
 }
 
+simdutf_really_inline vector_i8 as_vector_i8(const vector_u8 v) {
+  return vector_i8::vector_type(v.value);
+}
+
 simdutf_really_inline vector_u16 as_vector_u16(const vector_u8 v) {
   return vector_u16::vector_type(v.value);
 }

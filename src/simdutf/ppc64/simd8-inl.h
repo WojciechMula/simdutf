@@ -12,8 +12,8 @@ template <typename T> struct base8 {
   // Conversion from SIMD register
   simdutf_really_inline base8(const vector_type _value) : value{_value} {}
 
-  // Splat from scalar value
-  simdutf_really_inline base8(T scalar) : value{vec_splats(scalar)} {}
+  // Splat scalar
+  simdutf_really_inline base8(T v) : value{vec_splats(v)} {}
 
   // Conversion to SIMD register
   simdutf_really_inline operator const vector_type &() const {
@@ -44,6 +44,10 @@ template <typename T> struct base8 {
 
   simdutf_really_inline bool is_ascii() const {
     return move_mask_u8(this->value) == 0;
+  }
+
+  simdutf_really_inline uint16_t to_bitmask() const {
+    return move_mask_u8(value);
   }
 
   template <endianness big_endian>
@@ -136,6 +140,9 @@ template <typename T> struct simd8;
 template <typename T>
 simd8<bool> operator==(const simd8<T> a, const simd8<T> b);
 
+template <typename T>
+simd8<bool> operator!=(const simd8<T> a, const simd8<T> b);
+
 template <typename T> simd8<T> operator&(const simd8<T> a, const simd8<T> b);
 
 template <typename T> simd8<T> operator|(const simd8<T> a, const simd8<T> b);
@@ -143,6 +150,8 @@ template <typename T> simd8<T> operator|(const simd8<T> a, const simd8<T> b);
 template <typename T> simd8<T> operator^(const simd8<T> a, const simd8<T> b);
 
 template <typename T> simd8<T> operator+(const simd8<T> a, const simd8<T> b);
+
+template <typename T> simd8<bool> operator<(const simd8<T> a, const simd8<T> b);
 
 // SIMD byte mask type (returned by things like eq and gt)
 template <> struct simd8<bool> : base8<bool> {
@@ -167,6 +176,8 @@ template <> struct simd8<bool> : base8<bool> {
   simdutf_really_inline bool any() const {
     return !vec_all_eq(this->value, (vector_type)vec_splats(0));
   }
+
+  simdutf_really_inline bool all() const { return to_bitmask() == 0xffff; }
 
   simdutf_really_inline simd8<bool> operator~() const {
     return this->value ^ (vector_type)splat(true);
@@ -316,14 +327,6 @@ template <> struct simd8<uint8_t> : base8_numeric<uint8_t> {
   operator>=(const simd8<uint8_t> other) const {
     return other.min_val(*this) == other;
   }
-  simdutf_really_inline simd8<bool>
-  operator>(const simd8<uint8_t> other) const {
-    return this->gt_bits(other).any_bits_set();
-  }
-  simdutf_really_inline simd8<bool>
-  operator<(const simd8<uint8_t> other) const {
-    return this->gt_bits(other).any_bits_set();
-  }
 
   // Bit-specific operations
   simdutf_really_inline simd8<bool> bits_not_set() const {
@@ -376,6 +379,21 @@ template <> struct simd8<uint8_t> : base8_numeric<uint8_t> {
     }
     putchar('\n');
   }
+
+  void dump_ascii() const {
+    uint8_t tmp[16];
+    store(tmp);
+    for (int i = 0; i < 16; i++) {
+      if (i == 0) {
+        printf("[%c", tmp[i]);
+      } else if (i == 15) {
+        printf("%c]", tmp[i]);
+      } else {
+        printf("%c", tmp[i]);
+      }
+    }
+    putchar('\n');
+  }
 };
 
 // Signed bytes
@@ -423,8 +441,15 @@ template <> struct simd8<int8_t> : base8_numeric<int8_t> {
   simdutf_really_inline simd8<bool> operator>(const simd8<int8_t> other) const {
     return vec_cmpgt(this->value, other.value);
   }
-  simdutf_really_inline simd8<bool> operator<(const simd8<int8_t> other) const {
-    return vec_cmplt(this->value, other.value);
+
+  // Saturated math
+  simdutf_really_inline simd8<int8_t>
+  saturating_add(const simd8<int8_t> other) const {
+    return (vector_type)vec_adds(this->value, other.value);
+  }
+  simdutf_really_inline simd8<int8_t>
+  saturating_sub(const simd8<int8_t> other) const {
+    return (vector_type)vec_subs(this->value, (vector_type)other);
   }
 
   void dump() const {
@@ -446,6 +471,11 @@ template <> struct simd8<int8_t> : base8_numeric<int8_t> {
 template <typename T>
 simd8<bool> operator==(const simd8<T> a, const simd8<T> b) {
   return vec_cmpeq(a.value, b.value);
+}
+
+template <typename T>
+simd8<bool> operator!=(const simd8<T> a, const simd8<T> b) {
+  return vec_cmpne(a.value, b.value);
 }
 
 template <typename T> simd8<T> operator&(const simd8<T> a, const simd8<T> b) {
@@ -480,8 +510,15 @@ simdutf_really_inline simd8<int8_t>::operator simd8<uint8_t>() const {
   return (simd8<uint8_t>::vector_type)value;
 }
 
+template <typename T>
+simd8<bool> operator<(const simd8<T> a, const simd8<T> b) {
+  return vec_cmplt(a.value, b.value);
+}
+
 template <typename T> struct simd8x64 {
   static constexpr int NUM_CHUNKS = 64 / sizeof(simd8<T>);
+  static constexpr size_t ELEMENTS = simd8<T>::ELEMENTS;
+
   static_assert(NUM_CHUNKS == 4,
                 "PPC64 kernel should use four registers per 64-byte block.");
   simd8<T> chunks[NUM_CHUNKS];
@@ -490,6 +527,7 @@ template <typename T> struct simd8x64 {
   simd8x64<T> &
   operator=(const simd8<T> other) = delete; // no assignment allowed
   simd8x64() = delete;                      // no default constructor allowed
+  simd8x64(simd8x64<T> &&) = default;
 
   simdutf_really_inline simd8x64(const simd8<T> chunk0, const simd8<T> chunk1,
                                  const simd8<T> chunk2, const simd8<T> chunk3)
@@ -501,10 +539,10 @@ template <typename T> struct simd8x64 {
                simd8<T>::load(ptr + 3 * sizeof(simd8<T>) / sizeof(T))} {}
 
   simdutf_really_inline void store(T *ptr) const {
-    this->chunks[0].store(ptr + sizeof(simd8<T>) * 0 / sizeof(T));
-    this->chunks[1].store(ptr + sizeof(simd8<T>) * 1 / sizeof(T));
-    this->chunks[2].store(ptr + sizeof(simd8<T>) * 2 / sizeof(T));
-    this->chunks[3].store(ptr + sizeof(simd8<T>) * 3 / sizeof(T));
+    this->chunks[0].store(ptr + ELEMENTS * 0);
+    this->chunks[1].store(ptr + ELEMENTS * 1);
+    this->chunks[2].store(ptr + ELEMENTS * 2);
+    this->chunks[3].store(ptr + ELEMENTS * 3);
   }
 
   simdutf_really_inline simd8x64<T> &operator|=(const simd8x64<T> &other) {
@@ -584,6 +622,7 @@ template <typename T> struct simd8x64 {
                (this->chunks[3] <= mask_high) & (this->chunks[3] >= mask_low))
         .to_bitmask();
   }
+
   simdutf_really_inline uint64_t not_in_range(const T low, const T high) const {
     const simd8<T> mask_low = simd8<T>::splat(low - 1);
     const simd8<T> mask_high = simd8<T>::splat(high + 1);
@@ -630,3 +669,8 @@ template <typename T> struct simd8x64 {
     }
   }
 }; // struct simd8x64<T>
+
+simdutf_really_inline simd8<uint8_t> avg(const simd8<uint8_t> a,
+                                         const simd8<uint8_t> b) {
+  return vec_avg(a.value, b.value);
+}

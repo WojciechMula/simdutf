@@ -42,6 +42,43 @@ struct register_test {
 } // namespace test
 } // namespace simdutf
 
+template <typename T> void dump_ascii(const T &values) {
+  for (size_t i = 0; i < values.size(); i++) {
+    const uint8_t b = values[i];
+    if (b >= 32 and b < 128) {
+      printf(" %c ", b);
+    } else {
+      printf("   ");
+    }
+  }
+  putchar('\n');
+}
+
+template <typename T> void dump_hex(const T &values) {
+  for (size_t i = 0; i < values.size(); i++) {
+    const uint8_t b = values[i];
+    printf(" %02x", b);
+  }
+  putchar('\n');
+}
+
+template <typename T, typename U>
+void dump_diff_hex(const T &lhs, const U &rhs) {
+  const size_t ls = lhs.size();
+  const size_t rs = rhs.size();
+  const size_t size = (ls <= rs) ? ls : rs;
+  for (size_t i = 0; i < size; i++) {
+    const uint8_t l = lhs[i];
+    const uint8_t r = rhs[i];
+    if (l != r) {
+      printf(" %02x", l);
+    } else {
+      printf("   ");
+    }
+  }
+  putchar('\n');
+}
+
 #define TEST(name)                                                             \
   void test_impl_##name(const simdutf::implementation &impl);                  \
   void name(const simdutf::implementation &impl) {                             \
@@ -91,6 +128,28 @@ struct register_test {
       printf("rhs: %s = %s\n", #b, rhs_str.str().c_str());                     \
       printf("%s \n", #a);                                                     \
       printf("file %s:%d, function %s  \n", __FILE__, __LINE__, __func__);     \
+      exit(1);                                                                 \
+    }                                                                          \
+  }
+
+#define ASSERT_BYTES_EQUAL(a, b, len)                                          \
+  {                                                                            \
+    const auto lhs = (a);                                                      \
+    const auto rhs = (b);                                                      \
+    if (!std::equal(lhs.begin(), lhs.begin() + len, rhs.begin())) {                                                          \
+      printf("lhs = `%s`\n", #a);                                              \
+      printf(" ascii: ");                                                      \
+      dump_ascii(lhs);                                                         \
+      printf("   hex: ");                                                      \
+      dump_hex(lhs);                                                           \
+      printf("rhs = `%s`\n", #b);                                              \
+      printf(" ascii: ");                                                      \
+      dump_ascii(rhs);                                                         \
+      printf("   hex: ");                                                      \
+      dump_hex(rhs);                                                           \
+      printf("  diff: ");                                                      \
+      dump_diff_hex(lhs, rhs);                                                 \
+      printf("file %s:%d, function %s\n", __FILE__, __LINE__, __func__);       \
       exit(1);                                                                 \
     }                                                                          \
   }
