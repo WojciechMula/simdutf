@@ -365,19 +365,18 @@ def filter_features(file):
                 current_features = get_features(file, lineno, expr)
                 start_if_line = lineno
                 enabled = current_features.evaluate(context.enabled_features)
-            elif line.startswith('#endif // SIMDUTF_FEATURE'):
+            elif line.startswith('#endif') and line.find('// SIMDUTF_FEATURE') > 0:
                 if start_if_line is None:
                     raise ValueError(f"{file}:{lineno}: feature block not opened, orphan #endif found")
 
-                prefix_len = len('#endif // ')
-                expr = line[prefix_len:]
+                _, _, expr = line.partition('//')
                 if lineno < len(lines):
-                    nextline = lines[lineno]
-                    if nextline.startswith('       // '):
-                        expr += nextline[prefix_len:]
+                    nextline = lines[lineno].lstrip()
+                    if nextline.startswith('//') and nextline.find('SIMDUTF_FEATURE') > 0:
+                        expr += nextline[len('//'):]
                         lines[lineno] = None
 
-                features = get_features(line, lineno, expr)
+                features = get_features(file, lineno, expr)
                 if str(features) != str(current_features):
                     raise ValueError(f"{file}:{lineno}: feature #endif condition different than opening #if at {start_if_line}")
 
