@@ -87,14 +87,19 @@ simdutf_really_inline vector_u8 encoding_expand_6bit_fields(vector_u8 input) {
   //              0        1        1        2
   const auto in = as_vector_u32(expand_3_to_4.lookup_16(input));
 
-  const auto a = in.shr<2>() & uint32_t(0x3f000000);
-  const auto b = in.shr<4>() & uint32_t(0x003f0000);
-  const auto c = in.shl<2>() & uint32_t(0x00003f00);
-  const auto d = in & uint32_t(0x0000003f);
+  // t0    = [00000000|00000000|00000000|00dddddd]
+  const auto t0 = in & uint32_t(0x0000003f);
 
-  const auto tmp = a | b | c | d;
+  // t1    = [00000000|00000000|00cccccc|00dddddd]
+  const auto t1 = select(vector_u32::splat(0x00003f00), in.shl<2>(), t0);
 
-  return as_vector_u8(tmp);
+  // t2    = [00000000|00bbbbbb|00cccccc|00dddddd]
+  const auto t2 = select(vector_u32::splat(0x003f0000), in.shr<4>(), t1);
+
+  // t3    = [00aaaaaa|00bbbbbb|00cccccc|00dddddd]
+  const auto t3 = select(vector_u32::splat(0x3f000000), in.shr<2>(), t2);
+
+  return as_vector_u8(t3);
 }
 
 static inline void compress(const vector_u8 data, uint16_t mask, char *output) {
