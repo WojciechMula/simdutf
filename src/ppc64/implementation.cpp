@@ -1075,7 +1075,8 @@ implementation::internal_tests() const {
           entry(base64url_decoding_invalid_ignore_errors),
           entry(base64_decoding_invalid_strict_errors),
           entry(base64url_decoding_invalid_strict_errors),
-          entry(base64_decoding_pack)};
+          entry(base64_decoding_pack),
+          entry(base64_compress)};
   #undef entry
 }
 #endif

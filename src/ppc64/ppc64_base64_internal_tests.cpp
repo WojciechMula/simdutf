@@ -6,7 +6,7 @@ const char *base64_url =
 const char *accepted_whitespaces = "\x20\x09\x0a\x0c\x0d";
 } // namespace base64tests
 
-static void
+[[maybe_unused]] static void
 base64_encoding_translate_6bit_values(const simdutf::implementation &) {
   using simdutf::ppc64::encoding_translate_6bit_values;
   using simdutf::ppc64::vector_u8;
@@ -44,7 +44,7 @@ base64_encoding_translate_6bit_values(const simdutf::implementation &) {
   }
 }
 
-static void
+[[maybe_unused]] static void
 base64_encoding_expand_6bit_fields(const simdutf::implementation &) {
   using simdutf::ppc64::encoding_expand_6bit_fields;
   using simdutf::ppc64::vector_u8;
@@ -96,7 +96,8 @@ base64_encoding_expand_6bit_fields(const simdutf::implementation &) {
   }
 }
 
-static void base64_decoding_valid(const simdutf::implementation &) {
+[[maybe_unused]] static void
+base64_decoding_valid(const simdutf::implementation &) {
   using simdutf::ppc64::to_base64_mask;
   using simdutf::ppc64::vector_u8;
   using simdutf::ppc64::with_base64_std;
@@ -168,14 +169,15 @@ static void unittest_decoding_invalid_ignore_errors(const char *base64) {
   }
 
   for (size_t i = 0; i < 256; i++) {
-    auto ascii = vector_u8::splat(i);
+    const auto b = uint8_t(i);
+    auto ascii = vector_u8::splat(b);
     uint16_t error = 0;
     const auto mask =
         to_base64_mask<base64_url, with_ignore_errors>(ascii, error);
 
     if (map[i] == invalid or map[i] == whitespace) {
       if (mask != 0xffff or error != 0x0000) {
-        printf("value = %d (0x%02x)\n", i, i);
+        printf("value = %u (0x%02x)\n", b, b);
         printf("mask  = %04x\n", mask);
         printf("error = %04x\n", error);
         ascii.dump();
@@ -184,7 +186,7 @@ static void unittest_decoding_invalid_ignore_errors(const char *base64) {
       }
     } else {
       if (mask != 0x0000 or error != 0x0000) {
-        printf("value = %d (0x%02x)\n", i, i);
+        printf("value = %u (0x%02x)\n", b, b);
         printf("mask  = %04x\n", mask);
         printf("error = %04x\n", error);
         ascii.dump();
@@ -219,14 +221,15 @@ static void unittest_decoding_invalid_strict_errors(const char *base64) {
   }
 
   for (size_t i = 0; i < 256; i++) {
-    auto ascii = vector_u8::splat(i);
+    const uint8_t b = uint8_t(i);
+    auto ascii = vector_u8::splat(b);
     uint16_t error = 0;
     const auto mask =
         to_base64_mask<base64_url, with_strict_checking>(ascii, error);
 
     if (map[i] == invalid) {
       if (mask != 0xffff or error != 0xffff) {
-        printf("value = %d (0x%02x)\n", i, i);
+        printf("value = %u (0x%02x)\n", b, b);
         printf("mask  = %04x\n", mask);
         printf("error = %04x\n", error);
         ascii.dump();
@@ -235,7 +238,7 @@ static void unittest_decoding_invalid_strict_errors(const char *base64) {
       }
     } else if (map[i] == whitespace) {
       if (mask != 0xffff or error != 0x0000) {
-        printf("value = %d (0x%02x)\n", i, i);
+        printf("value = %lu (0x%02lx)\n", i, i);
         printf("mask  = %04x\n", mask);
         printf("error = %04x\n", error);
         ascii.dump();
@@ -244,7 +247,7 @@ static void unittest_decoding_invalid_strict_errors(const char *base64) {
       }
     } else {
       if (mask != 0x0000 or error != 0x0000) {
-        printf("value = %d (0x%02x)\n", i, i);
+        printf("value = %lu (0x%02lx)\n", i, i);
         printf("mask  = %04x\n", mask);
         printf("error = %04x\n", error);
         ascii.dump();
@@ -255,7 +258,7 @@ static void unittest_decoding_invalid_strict_errors(const char *base64) {
   }
 }
 
-static void
+[[maybe_unused]] static void
 base64_decoding_invalid_ignore_errors(const simdutf::implementation &) {
   using simdutf::ppc64::with_base64_std;
 
@@ -263,7 +266,7 @@ base64_decoding_invalid_ignore_errors(const simdutf::implementation &) {
       base64tests::base64_std);
 }
 
-static void
+[[maybe_unused]] static void
 base64url_decoding_invalid_ignore_errors(const simdutf::implementation &) {
   using simdutf::ppc64::with_base64_url;
 
@@ -271,7 +274,7 @@ base64url_decoding_invalid_ignore_errors(const simdutf::implementation &) {
       base64tests::base64_url);
 }
 
-static void
+[[maybe_unused]] static void
 base64_decoding_invalid_strict_errors(const simdutf::implementation &) {
   using simdutf::ppc64::with_base64_std;
 
@@ -279,7 +282,7 @@ base64_decoding_invalid_strict_errors(const simdutf::implementation &) {
       base64tests::base64_std);
 }
 
-static void
+[[maybe_unused]] static void
 base64url_decoding_invalid_strict_errors(const simdutf::implementation &) {
   using simdutf::ppc64::with_base64_url;
 
@@ -287,7 +290,8 @@ base64url_decoding_invalid_strict_errors(const simdutf::implementation &) {
       base64tests::base64_url);
 }
 
-static void base64_decoding_pack(const simdutf::implementation &) {
+[[maybe_unused]] static void
+base64_decoding_pack(const simdutf::implementation &) {
   using simdutf::ppc64::decoding_pack;
   using simdutf::ppc64::vector_u8;
 
@@ -336,6 +340,59 @@ static void base64_decoding_pack(const simdutf::implementation &) {
           abort();
         }
       }
+    }
+  }
+}
+
+[[maybe_unused]] static int
+scalar_compress(const simdutf::ppc64::vector_u8 data, uint16_t nmask,
+                char *output) {
+  char tmp[16];
+  data.store(tmp);
+
+  int j = 0;
+  for (int i = 0; i < 16; i++) {
+    if ((nmask & 0x1) == 0) {
+      output[j++] = tmp[i];
+    }
+
+    nmask >>= 1;
+  }
+
+  return j;
+}
+
+[[maybe_unused]] static void base64_compress(const simdutf::implementation &) {
+  using simdutf::ppc64::compress;
+  using simdutf::ppc64::vector_u8;
+
+  char want[16];
+  char got[16];
+
+  const auto data = vector_u8('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                              'K', 'L', 'M', 'N', 'O', 'P');
+  for (uint32_t mask = 0; mask <= 0xffff; mask++) {
+    memset(want, 0, 16);
+    memset(got, 0, 16);
+    const uint16_t nmask = uint16_t(~mask);
+
+    const int count = scalar_compress(data, nmask, want);
+    compress(data, nmask, got);
+
+    if (memcmp(want, got, count) != 0) {
+      printf("want = ");
+      for (int i = 0; i < count; i++) {
+        putchar(want[i]);
+      }
+      putchar('\n');
+
+      printf("got  = ");
+      for (int i = 0; i < count; i++) {
+        putchar(got[i]);
+      }
+      putchar('\n');
+
+      exit(1);
     }
   }
 }

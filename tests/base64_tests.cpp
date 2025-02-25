@@ -160,19 +160,15 @@ TEST(roundtrip_base64_with_spaces) {
       }
       std::vector<char> back(simdutf::maximal_binary_length_from_base64(
           buffer.data(), buffer.size()));
-      for (auto option : {
-               simdutf::last_chunk_handling_options::strict /*,
-                simdutf::last_chunk_handling_options::loose,
-                simdutf::last_chunk_handling_options::stop_before_partial*/
-           }) {
+      for (auto option :
+           {simdutf::last_chunk_handling_options::strict,
+            simdutf::last_chunk_handling_options::loose,
+            simdutf::last_chunk_handling_options::stop_before_partial}) {
         simdutf::result r = implementation.base64_to_binary(
             buffer.data(), buffer.size(), back.data(), simdutf::base64_default,
             option);
         ASSERT_EQUAL(r.error, simdutf::error_code::SUCCESS);
         ASSERT_EQUAL(r.count, len);
-
-        printf("buffer = ");
-        dump_ascii(buffer);
         ASSERT_BYTES_EQUAL(source, back, len);
       }
       for (auto option :

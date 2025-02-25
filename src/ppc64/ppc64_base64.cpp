@@ -151,18 +151,15 @@ static inline void compress(const vector_u8 data, uint16_t mask, char *output) {
   // two instructions on most compilers.
 
   vec_u64_t tmp = {
-      __builtin_bswap64(tables::base64::thintable_epi8[mask2]),
-      __builtin_bswap64(tables::base64::thintable_epi8[mask1]),
+      tables::base64::thintable_epi8[mask2],
+      tables::base64::thintable_epi8[mask1],
   };
-  auto shufmask = vector_u8(vec_u8_t(tmp));
+  auto shufmask = vector_u8(vec_reve(vec_u8_t(tmp)));
 
-  puts(">>>");
-  shufmask.dump();
   // we increment by 0x08 the second half of the mask
   shufmask =
       shufmask + vector_u8(0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8);
 
-  shufmask.dump();
   // this is the version "nearly pruned"
   const auto pruned = shufmask.lookup_16(data);
   // we still need to put the two halves together.
@@ -174,10 +171,7 @@ static inline void compress(const vector_u8 data, uint16_t mask, char *output) {
   // at the end.
   const auto compactmask =
       vector_u8::load(tables::base64::pshufb_combine_table + pop1 * 8);
-  compactmask.dump();
-  pruned.dump();
   const auto answer = compactmask.lookup_16(pruned);
-  answer.dump();
   answer.store(output);
 }
 
@@ -513,7 +507,6 @@ compress_decode_base64(char *dst, const chartype *src, size_t srclen,
                          (uint32_t(uint8_t(buffer_start[2])) << 1 * 6) +
                          (uint32_t(uint8_t(buffer_start[3])) << 0 * 6))
                         << 8;
-      triple = scalar::u32_swap_bytes(triple);
       std::memcpy(dst, &triple, 4);
 
       dst += 3;
@@ -525,7 +518,6 @@ compress_decode_base64(char *dst, const chartype *src, size_t srclen,
                          (uint32_t(uint8_t(buffer_start[2])) << 1 * 6) +
                          (uint32_t(uint8_t(buffer_start[3])) << 0 * 6))
                         << 8;
-      triple = scalar::u32_swap_bytes(triple);
       std::memcpy(dst, &triple, 3);
 
       dst += 3;
