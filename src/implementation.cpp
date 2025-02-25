@@ -72,11 +72,12 @@ simdutf_warn_unused encoding_type implementation::autodetect_encoding(
   return encoding_type::unspecified;
 }
 
-#ifdef SIMDUTF_INTERNAL_TESTS
-std::vector<implementation::TestProcedure> implementation::internal_tests() const {
-    return {};
+  #ifdef SIMDUTF_INTERNAL_TESTS
+std::vector<implementation::TestProcedure>
+implementation::internal_tests() const {
+  return {};
 }
-#endif
+  #endif
 #endif // SIMDUTF_FEATURE_DETECT_ENCODING
 
 #ifdef SIMDUTF_FEATURE_BASE64

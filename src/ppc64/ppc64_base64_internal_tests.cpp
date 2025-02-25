@@ -1,20 +1,20 @@
-// unit tests of internal implementation
+namespace base64tests {
+const char *base64_std =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const char *base64_url =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const char *accepted_whitespaces = "\x20\x09\x0a\x0c\x0d";
+} // namespace base64tests
 
-namespace internal {
-  const char *base64_std =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const char *base64_url =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-  const char *accepted_whitespaces = "\x20\x09\x0a\x0c\x0d";
-}
-
-static void unittest_encoding_translate_6bit_values() {
-  puts("unittest_encoding_translate_6bit_values");
+static void
+base64_encoding_translate_6bit_values(const simdutf::implementation &) {
+  using simdutf::ppc64::encoding_translate_6bit_values;
+  using simdutf::ppc64::vector_u8;
 
   for (uint8_t value = 0; value < 64; value++) {
     const auto in = vector_u8::splat(value);
     const auto got = encoding_translate_6bit_values<false>(in);
-    const auto want = vector_u8::splat(internal::base64_std[value]);
+    const auto want = vector_u8::splat(base64tests::base64_std[value]);
 
     const auto eq = (got == want);
     if (not eq.all()) {
@@ -30,7 +30,7 @@ static void unittest_encoding_translate_6bit_values() {
   for (uint8_t value = 0; value < 64; value++) {
     const auto in = vector_u8::splat(value);
     const auto got = encoding_translate_6bit_values<true>(in);
-    const auto want = vector_u8::splat(internal::base64_url[value]);
+    const auto want = vector_u8::splat(base64tests::base64_url[value]);
 
     const auto eq = (got == want);
     if (not eq.all()) {
@@ -44,8 +44,10 @@ static void unittest_encoding_translate_6bit_values() {
   }
 }
 
-static void unittest_encoding_expand_6bit_fields() {
-  puts("unittest_encoding_expand_6bit_fields");
+static void
+base64_encoding_expand_6bit_fields(const simdutf::implementation &) {
+  using simdutf::ppc64::encoding_expand_6bit_fields;
+  using simdutf::ppc64::vector_u8;
 
   for (size_t position = 0; position < 5; position++) {
     for (uint32_t value = 0; value < 0xffffff; value++) {
@@ -94,9 +96,15 @@ static void unittest_encoding_expand_6bit_fields() {
   }
 }
 
-static void unittest_decoding_valid() {
+static void base64_decoding_valid(const simdutf::implementation &) {
+  using simdutf::ppc64::to_base64_mask;
+  using simdutf::ppc64::vector_u8;
+  using simdutf::ppc64::with_base64_std;
+  using simdutf::ppc64::with_base64_url;
+  using simdutf::ppc64::with_ignore_errors;
+
   for (uint8_t i = 0; i < 64; i++) {
-    auto ascii = vector_u8::splat(internal::base64_std[i]);
+    auto ascii = vector_u8::splat(base64tests::base64_std[i]);
     uint16_t error = 0;
     const auto mask =
         to_base64_mask<with_base64_std, with_ignore_errors>(ascii, error);
@@ -115,7 +123,7 @@ static void unittest_decoding_valid() {
   }
 
   for (uint8_t i = 0; i < 64; i++) {
-    auto ascii = vector_u8::splat(internal::base64_url[i]);
+    auto ascii = vector_u8::splat(base64tests::base64_url[i]);
     uint16_t error = 0;
     const auto mask =
         to_base64_mask<with_base64_url, with_ignore_errors>(ascii, error);
@@ -135,7 +143,11 @@ static void unittest_decoding_valid() {
 }
 
 template <bool base64_url>
-static void unittest_decoding_invalid_ignore_errors(const char* base64) {
+static void unittest_decoding_invalid_ignore_errors(const char *base64) {
+  using simdutf::ppc64::to_base64_mask;
+  using simdutf::ppc64::vector_u8;
+  using simdutf::ppc64::with_ignore_errors;
+
   const char *accepted_whitespaces = " \t\n\r\v";
 
   constexpr uint8_t invalid = 0xff;
@@ -162,29 +174,33 @@ static void unittest_decoding_invalid_ignore_errors(const char* base64) {
         to_base64_mask<base64_url, with_ignore_errors>(ascii, error);
 
     if (map[i] == invalid or map[i] == whitespace) {
-        if (mask != 0xffff or error != 0x0000) {
-          printf("value = %d (0x%02x)\n", i, i);
-          printf("mask  = %04x\n", mask);
-          printf("error = %04x\n", error);
-          ascii.dump();
-          printf("%s:%d\n", __FILE__, __LINE__);
-          exit(1);
-        }
+      if (mask != 0xffff or error != 0x0000) {
+        printf("value = %d (0x%02x)\n", i, i);
+        printf("mask  = %04x\n", mask);
+        printf("error = %04x\n", error);
+        ascii.dump();
+        printf("%s:%d\n", __FILE__, __LINE__);
+        exit(1);
+      }
     } else {
-        if (mask != 0x0000 or error != 0x0000) {
-          printf("value = %d (0x%02x)\n", i, i);
-          printf("mask  = %04x\n", mask);
-          printf("error = %04x\n", error);
-          ascii.dump();
-          printf("%s:%d\n", __FILE__, __LINE__);
-          exit(1);
-        }
+      if (mask != 0x0000 or error != 0x0000) {
+        printf("value = %d (0x%02x)\n", i, i);
+        printf("mask  = %04x\n", mask);
+        printf("error = %04x\n", error);
+        ascii.dump();
+        printf("%s:%d\n", __FILE__, __LINE__);
+        exit(1);
+      }
     }
   }
 }
 
 template <bool base64_url>
-static void unittest_decoding_invalid_strict_errors(const char* base64) {
+static void unittest_decoding_invalid_strict_errors(const char *base64) {
+  using simdutf::ppc64::to_base64_mask;
+  using simdutf::ppc64::vector_u8;
+  using simdutf::ppc64::with_strict_checking;
+
   constexpr uint8_t invalid = 0xff;
   constexpr uint8_t whitespace = 0x80;
 
@@ -198,7 +214,7 @@ static void unittest_decoding_invalid_strict_errors(const char* base64) {
   }
 
   for (size_t i = 0; i < 5; i++) {
-    const uint8_t idx = uint8_t(internal::accepted_whitespaces[i]);
+    const uint8_t idx = uint8_t(base64tests::accepted_whitespaces[i]);
     map[idx] = whitespace;
   }
 
@@ -209,46 +225,71 @@ static void unittest_decoding_invalid_strict_errors(const char* base64) {
         to_base64_mask<base64_url, with_strict_checking>(ascii, error);
 
     if (map[i] == invalid) {
-        if (mask != 0xffff or error != 0xffff) {
-          printf("value = %d (0x%02x)\n", i, i);
-          printf("mask  = %04x\n", mask);
-          printf("error = %04x\n", error);
-          ascii.dump();
-          printf("%s:%d\n", __FILE__, __LINE__);
-          exit(1);
-        }
-    }
-    else if (map[i] == whitespace) {
-        if (mask != 0xffff or error != 0x0000) {
-          printf("value = %d (0x%02x)\n", i, i);
-          printf("mask  = %04x\n", mask);
-          printf("error = %04x\n", error);
-          ascii.dump();
-          printf("%s:%d\n", __FILE__, __LINE__);
-          exit(1);
-        }
+      if (mask != 0xffff or error != 0xffff) {
+        printf("value = %d (0x%02x)\n", i, i);
+        printf("mask  = %04x\n", mask);
+        printf("error = %04x\n", error);
+        ascii.dump();
+        printf("%s:%d\n", __FILE__, __LINE__);
+        exit(1);
+      }
+    } else if (map[i] == whitespace) {
+      if (mask != 0xffff or error != 0x0000) {
+        printf("value = %d (0x%02x)\n", i, i);
+        printf("mask  = %04x\n", mask);
+        printf("error = %04x\n", error);
+        ascii.dump();
+        printf("%s:%d\n", __FILE__, __LINE__);
+        exit(1);
+      }
     } else {
-        if (mask != 0x0000 or error != 0x0000) {
-          printf("value = %d (0x%02x)\n", i, i);
-          printf("mask  = %04x\n", mask);
-          printf("error = %04x\n", error);
-          ascii.dump();
-          printf("%s:%d\n", __FILE__, __LINE__);
-          exit(1);
-        }
+      if (mask != 0x0000 or error != 0x0000) {
+        printf("value = %d (0x%02x)\n", i, i);
+        printf("mask  = %04x\n", mask);
+        printf("error = %04x\n", error);
+        ascii.dump();
+        printf("%s:%d\n", __FILE__, __LINE__);
+        exit(1);
+      }
     }
   }
 }
 
-static void unittest_decoding_invalid() {
-  //unittest_decoding_invalid_ignore_errors<with_base64_std>(internal::base64_std);
-  //unittest_decoding_invalid_ignore_errors<with_base64_url>(internal::base64_url);
-  unittest_decoding_invalid_strict_errors<with_base64_std>(internal::base64_std);
-  //unittest_decoding_invalid_strict_errors<with_base64_url>(internal::base64_url);
+static void
+base64_decoding_invalid_ignore_errors(const simdutf::implementation &) {
+  using simdutf::ppc64::with_base64_std;
+
+  unittest_decoding_invalid_ignore_errors<with_base64_std>(
+      base64tests::base64_std);
 }
 
-static void unittest_decoding_pack() {
-  puts("unittest_decoding_pack");
+static void
+base64url_decoding_invalid_ignore_errors(const simdutf::implementation &) {
+  using simdutf::ppc64::with_base64_url;
+
+  unittest_decoding_invalid_ignore_errors<with_base64_url>(
+      base64tests::base64_url);
+}
+
+static void
+base64_decoding_invalid_strict_errors(const simdutf::implementation &) {
+  using simdutf::ppc64::with_base64_std;
+
+  unittest_decoding_invalid_strict_errors<with_base64_std>(
+      base64tests::base64_std);
+}
+
+static void
+base64url_decoding_invalid_strict_errors(const simdutf::implementation &) {
+  using simdutf::ppc64::with_base64_url;
+
+  unittest_decoding_invalid_strict_errors<with_base64_url>(
+      base64tests::base64_url);
+}
+
+static void base64_decoding_pack(const simdutf::implementation &) {
+  using simdutf::ppc64::decoding_pack;
+  using simdutf::ppc64::vector_u8;
 
   for (size_t position = 0; position < 4; position++) {
     for (uint32_t value = 0; value < 0xffffff; value++) {
@@ -297,13 +338,4 @@ static void unittest_decoding_pack() {
       }
     }
   }
-}
-
-static void unittest_implementation() {
-  // unittest_encoding_translate_6bit_values();
-  // unittest_encoding_expand_6bit_fields();
-  // unittest_decoding_valid();
-  unittest_decoding_invalid();
-  //unittest_decoding_pack();
-  puts("All OK");
 }

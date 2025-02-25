@@ -30,7 +30,7 @@ struct test_entry {
   std::string name;
   test_procedure procedure;
 
-  void operator()(const simdutf::implementation &impl) { procedure(impl); }
+  void operator()(const simdutf::implementation &impl);
 };
 
 std::list<test_entry> &test_procedures();
@@ -83,12 +83,7 @@ void dump_diff_hex(const T &lhs, const U &rhs) {
   void test_impl_##name(const simdutf::implementation &impl);                  \
   void name(const simdutf::implementation &impl) {                             \
     simdutf::get_active_implementation() = &impl;                              \
-    std::string title = #name;                                                 \
-    std::replace(title.begin(), title.end(), '_', ' ');                        \
-    printf("Running '%s'... ", title.c_str());                                 \
-    fflush(stdout);                                                            \
     test_impl_##name(impl);                                                    \
-    puts(" OK");                                                               \
   }                                                                            \
   static simdutf::test::register_test test_register_##name(#name, name);       \
   void test_impl_##name(                                                       \
@@ -97,10 +92,6 @@ void dump_diff_hex(const T &lhs, const U &rhs) {
 #define TEST_LOOP(trials, name)                                                \
   void test_impl_##name(const simdutf::implementation &impl, uint32_t seed);   \
   void name(const simdutf::implementation &impl) {                             \
-    std::string title = #name;                                                 \
-    std::replace(title.begin(), title.end(), '_', ' ');                        \
-    printf("Running '%s'... ", title.c_str());                                 \
-    fflush(stdout);                                                            \
     for (size_t trial = 0; trial < (trials); trial++) {                        \
       const uint32_t seed{1234 + uint32_t(trial)};                             \
       if ((trial % 100) == 0) {                                                \
@@ -109,7 +100,6 @@ void dump_diff_hex(const T &lhs, const U &rhs) {
       }                                                                        \
       test_impl_##name(impl, seed);                                            \
     }                                                                          \
-    puts(" OK");                                                               \
   }                                                                            \
   static simdutf::test::register_test test_register_##name(#name, name);       \
   void test_impl_##name(const simdutf::implementation &implementation,         \
@@ -136,7 +126,7 @@ void dump_diff_hex(const T &lhs, const U &rhs) {
   {                                                                            \
     const auto lhs = (a);                                                      \
     const auto rhs = (b);                                                      \
-    if (!std::equal(lhs.begin(), lhs.begin() + len, rhs.begin())) {                                                          \
+    if (!std::equal(lhs.begin(), lhs.begin() + len, rhs.begin())) {            \
       printf("lhs = `%s`\n", #a);                                              \
       printf(" ascii: ");                                                      \
       dump_ascii(lhs);                                                         \

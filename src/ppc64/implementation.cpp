@@ -67,6 +67,11 @@ must_be_2_3_continuation(const simd8<uint8_t> prev2,
   #include "generic/utf8_to_latin1/valid_utf8_to_latin1.h"
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 
+#ifdef SIMDUTF_INTERNAL_TESTS
+  #if SIMDUTF_FEATURE_BASE64
+    #include "ppc64_base64_internal_tests.cpp"
+  #endif // SIMDUTF_FEATURE_BASE64
+#endif   // SIMDUTF_INTERNAL_TESTS
 //
 // Implementation-specific overrides
 //
@@ -1057,6 +1062,23 @@ size_t implementation::binary_to_base64(const char *input, size_t length,
   }
 }
 #endif // SIMDUTF_FEATURE_BASE64
+
+#ifdef SIMDUTF_INTERNAL_TESTS
+std::vector<implementation::TestProcedure>
+implementation::internal_tests() const {
+  #define entry(proc)                                                          \
+    TestProcedure { #proc, proc }
+  return {entry(base64_encoding_translate_6bit_values),
+          entry(base64_encoding_expand_6bit_fields),
+          entry(base64_decoding_valid),
+          entry(base64_decoding_invalid_ignore_errors),
+          entry(base64url_decoding_invalid_ignore_errors),
+          entry(base64_decoding_invalid_strict_errors),
+          entry(base64url_decoding_invalid_strict_errors),
+          entry(base64_decoding_pack)};
+  #undef entry
+}
+#endif
 
 } // namespace SIMDUTF_IMPLEMENTATION
 } // namespace simdutf

@@ -291,6 +291,10 @@ public:
   size_t binary_to_base64(const char *input, size_t length, char *output,
                           base64_options options) const noexcept;
 #endif // SIMDUTF_FEATURE_BASE64
+
+#ifdef SIMDUTF_INTERNAL_TESTS
+  virtual std::vector<TestProcedure> internal_tests() const override;
+#endif
 };
 
 } // namespace ppc64

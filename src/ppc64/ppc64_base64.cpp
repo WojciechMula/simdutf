@@ -150,8 +150,10 @@ static inline void compress(const vector_u8 data, uint16_t mask, char *output) {
   // thintable_epi8[mask2] into a 128-bit register, using only
   // two instructions on most compilers.
 
-  vec_u64_t tmp = {__builtin_bswap64(tables::base64::thintable_epi8[mask2]), __builtin_bswap64(tables::base64::thintable_epi8[mask1]),
-                   };
+  vec_u64_t tmp = {
+      __builtin_bswap64(tables::base64::thintable_epi8[mask2]),
+      __builtin_bswap64(tables::base64::thintable_epi8[mask1]),
+  };
   auto shufmask = vector_u8(vec_u8_t(tmp));
 
   puts(">>>");
