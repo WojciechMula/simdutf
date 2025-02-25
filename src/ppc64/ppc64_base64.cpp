@@ -268,23 +268,20 @@ static inline block64 load_block(const char16_t *src) {
 }
 
 static simdutf_really_inline vector_u8 decoding_pack(vector_u8 input) {
-  // [00aaaaaa|00bbbbbb|00cccccc|00dddddd]
+  // in   = [00aaaaaa|00bbbbbb|00cccccc|00dddddd]
+  // want = [00000000|aaaaaabb|bbbbcccc|ccdddddd]
 
-  auto in = as_vector_u32(input);
-  // a = [00000000aaaaaa000000000000000000]
-  const auto a = in.shr<6>() & uint32_t(0x3f << (3 * 6));
+  auto in = as_vector_u16(input);
+  // t0   = [00??aaaa|aabbbbbb|00??cccc|ccdddddd]
+  const auto t0 = in.shr<2>();
+  const auto t1 = select(vector_u16::splat(0x0fc0), t0, in);
 
-  // b = [00000000000000bbbbbb000000000000]
-  const auto b = in.shr<4>() & uint32_t(0x3f << (2 * 6));
+  // t0   = [00??????|aaaaaabb|bbbbcccc|ccdddddd]
+  const auto t2 = as_vector_u32(t1);
+  const auto t3 = t2.shr<4>();
+  const auto t4 = select(vector_u32::splat(0x00fff000), t3, t2);
 
-  // c = [00000000000000000000cccccc000000]
-  const auto c = in.shr<2>() & uint32_t(0x3f << (1 * 6));
-
-  // d = [00000000000000000000000000dddddd]
-  const auto d = in & uint32_t(0x3f);
-
-  // t = [00000000|aaaaaabb|bbbbcccc|ccdddddd]
-  const auto tmp = as_vector_u8(a | b | c | d);
+  const auto tmp = as_vector_u8(t4);
 
   const auto shuffle =
       vector_u8(1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 0, 0, 0, 0);
