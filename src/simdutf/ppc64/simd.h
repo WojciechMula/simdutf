@@ -76,14 +76,45 @@ template <typename T> uint16_t move_mask_u8(T vec) {
 #endif
 }
 
-template <typename T>
-T select(const T cond, const T val_true, const T val_false) {
-  return vec_sel(val_false.value, val_true.value, cond.value);
-}
-
 #include "simd8-inl.h"
 #include "simd16-inl.h"
 #include "simd32-inl.h"
+
+template <typename T>
+simd8<T> select(const simd8<T> cond, const simd8<T> val_true,
+                const simd8<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, cond.value);
+}
+
+template <typename T>
+simd8<T> select(const T cond, const simd8<T> val_true,
+                const simd8<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, vec_splats(cond));
+}
+
+template <typename T>
+simd16<T> select(const simd16<T> cond, const simd16<T> val_true,
+                 const simd16<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, cond.value);
+}
+
+template <typename T>
+simd16<T> select(const T cond, const simd16<T> val_true,
+                 const simd16<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, vec_splats(cond));
+}
+
+template <typename T>
+simd32<T> select(const simd32<T> cond, const simd32<T> val_true,
+                 const simd32<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, cond.value);
+}
+
+template <typename T>
+simd32<T> select(const T cond, const simd32<T> val_true,
+                 const simd32<T> val_false) {
+  return vec_sel(val_false.value, val_true.value, vec_splats(cond));
+}
 
 using vector_u8 = simd8<uint8_t>;
 using vector_u16 = simd16<uint16_t>;

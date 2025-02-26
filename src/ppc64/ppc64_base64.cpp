@@ -91,13 +91,13 @@ simdutf_really_inline vector_u8 encoding_expand_6bit_fields(vector_u8 input) {
   const auto t0 = in & uint32_t(0x0000003f);
 
   // t1    = [00000000|00000000|00cccccc|00dddddd]
-  const auto t1 = select(vector_u32::splat(0x00003f00), in.shl<2>(), t0);
+  const auto t1 = select(uint32_t(0x00003f00), in.shl<2>(), t0);
 
   // t2    = [00000000|00bbbbbb|00cccccc|00dddddd]
-  const auto t2 = select(vector_u32::splat(0x003f0000), in.shr<4>(), t1);
+  const auto t2 = select(uint32_t(0x003f0000), in.shr<4>(), t1);
 
   // t3    = [00aaaaaa|00bbbbbb|00cccccc|00dddddd]
-  const auto t3 = select(vector_u32::splat(0x3f000000), in.shr<2>(), t2);
+  const auto t3 = select(uint32_t(0x3f000000), in.shr<2>(), t2);
 
   return as_vector_u8(t3);
 }
@@ -279,12 +279,12 @@ static simdutf_really_inline vector_u8 decoding_pack(vector_u8 input) {
   auto in = as_vector_u16(input);
   // t0   = [00??aaaa|aabbbbbb|00??cccc|ccdddddd]
   const auto t0 = in.shr<2>();
-  const auto t1 = select(vector_u16::splat(0x0fc0), t0, in);
+  const auto t1 = select(uint16_t(0x0fc0), t0, in);
 
   // t0   = [00??????|aaaaaabb|bbbbcccc|ccdddddd]
   const auto t2 = as_vector_u32(t1);
   const auto t3 = t2.shr<4>();
-  const auto t4 = select(vector_u32::splat(0x00fff000), t3, t2);
+  const auto t4 = select(uint32_t(0x00fff000), t3, t2);
 
   const auto tmp = as_vector_u8(t4);
 

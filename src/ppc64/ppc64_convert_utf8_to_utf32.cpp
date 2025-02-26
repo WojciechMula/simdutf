@@ -29,12 +29,15 @@ size_t convert_masked_utf8_to_utf32(const char *input,
   }
   if (((utf8_end_of_code_point_mask & 0xffff) == 0xaaaa)) {
     // We want to take 8 2-byte UTF-8 code units and turn them into 8 4-byte
-    // UTF-32 code units. There is probably a more efficient sequence, but the
-    // following might do.
+    // UTF-32 code units.
     const auto perm = as_vector_u16(in);
-    const auto ascii = perm & uint16_t(0x007f);
-    const auto highbyte = perm & uint16_t(0x1f00);
-    const auto composed = ascii | highbyte.shr<2>();
+    // in = [110aaaaa|10bbbbbb]
+    // t0 = [00000000|00bbbbbb]
+    const auto t0 = perm & uint16_t(0x007f);
+
+    // t1 = [00110aaa|aabbbbbb]
+    const auto t1 = perm.shr<2>();
+    const auto composed = select(uint16_t(0x1f00 >> 2), t1, t0);
 
     const auto composed8 = as_vector_u8(composed);
     composed8.store_words_as_utf32(utf32_output);
@@ -44,20 +47,25 @@ size_t convert_masked_utf8_to_utf32(const char *input,
   }
   if (input_utf8_end_of_code_point_mask == 0x924) {
     // We want to take 4 3-byte UTF-8 code units and turn them into 4 4-byte
-    // UTF-32 code units. There is probably a more efficient sequence, but the
-    // following might do.
+    // UTF-32 code units.
     const auto sh =
-        vector_u8(2, 1, 0, -1, 5, 4, 3, -1, 8, 7, 6, -1, 11, 10, 9, -1);
-    const auto perm =
-        as_vector_u32(sh.lookup_32(in, vector_u8::zero())).swap_bytes();
-    const auto ascii = perm & uint32_t(0x0000007f);
-    const auto middlebyte = perm & uint32_t(0x00003f00);
-    const auto middlebyte_shifted = middlebyte.shr<2>();
-    const auto highbyte = perm & uint32_t(0x0f0000);
-    const auto highbyte_shifted = highbyte.shr<4>();
-    const auto composed = ascii | middlebyte_shifted | highbyte_shifted;
+        vector_u8(-1, 0, 1, 2, -1, 3, 4, 5, -1, 6, 7, 8, -1, 9, 10, 11);
+    const auto perm = as_vector_u32(sh.lookup_32(in, vector_u8::zero()));
 
-    composed.store(utf32_output);
+    // in = [1110aaaa|10bbbbbb|10cccccc]
+
+    // t0 = [00000000|00000000|00cccccc]
+    const auto t0 = perm & uint32_t(0x0000007f);
+
+    // t2 = [00000000|0000bbbb|bbcccccc]
+    const auto t1 = perm.shr<2>();
+    const auto t2 = select(uint32_t(0x00003f00 >> 2), t1, t0);
+
+    // t4 = [00000000|aaaabbbb|bbcccccc]
+    const auto t3 = perm.shr<4>();
+    const auto t4 = select(uint32_t(0x0f0000 >> 4), t3, t2);
+
+    t4.store(utf32_output);
     utf32_output += 4;
     return 12;
   }

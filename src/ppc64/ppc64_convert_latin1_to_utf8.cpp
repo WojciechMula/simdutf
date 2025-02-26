@@ -1,6 +1,3 @@
-// Note: this is a direct translation of westmere implementation, no
-// AltiVec-specific code
-
 /*
  * reads a vector of uint16 values
  * bits after 11th are ignored
@@ -17,7 +14,7 @@ write_v_u16_11bits_to_utf8(const vector_u16 v_u16, char *&utf8_output,
 
   // 0b1100_0000_1000_0000
   const auto v_c080 = vector_u16(0xc080);
-  // 0b0001_1111_0000_0000
+  // 0b0011_1111_0000_0000
   const auto v_1f00 = vector_u16(0x1f00);
   // 0b0000_0000_0011_1111
   const auto v_003f = vector_u16(0x003f);
@@ -26,23 +23,21 @@ write_v_u16_11bits_to_utf8(const vector_u16 v_u16, char *&utf8_output,
   // input 16-bit word : [0000|0aaa|aabb|bbbb] x 8
   // expected output   : [110a|aaaa|10bb|bbbb] x 8
 
-  // t0 = [000a|aaaa|bbbb|bb00]
-  const auto t0 = v_u16.shl<2>();
-  // t1 = [000a|aaaa|0000|0000]
-  const auto t1 = t0 & v_1f00;
-  // t2 = [0000|0000|00bb|bbbb]
-  const auto t2 = v_u16 & v_003f;
-  // t3 = [000a|aaaa|00bb|bbbb]
-  const auto t3 = t1 | t2;
-  // t4 = [110a|aaaa|10bb|bbbb]
-  const auto t4 = t3 | v_c080;
+  // t0 = [0000|0000|00bb|bbbb]
+  const auto t0 = v_u16 & v_003f;
+  // t1 = [000a|aaaa|bbbb|bb00]
+  const auto t1 = v_u16.shl<2>();
+  // t2 = [000a|aaaa|00bb|bbbb]
+  const auto t2 = select(v_1f00, t1, t0);
+  // t3 = [110a|aaaa|10bb|bbbb]
+  const auto t3 = t2 | v_c080;
 
   // 2. merge ASCII and 2-byte codewords
-  auto utf8_unpacked =
-      select(one_byte_bytemask, as_vector_u8(v_u16), as_vector_u8(t4.value));
+  const auto utf8_unpacked1 =
+      select(one_byte_bytemask, as_vector_u8(v_u16), as_vector_u8(t3));
 
-  const auto tmp = vec_revb(vec_u16_t(utf8_unpacked.value));
-  utf8_unpacked.value = vec_u8_t(tmp);
+  const auto tmp = as_vector_u16(utf8_unpacked1).swap_bytes();
+  const auto utf8_unpacked = as_vector_u8(tmp);
 
   // 3. prepare bitmask for 8-bit lookup
   //    one_byte_bitmask = hhggffeeddccbbaa -- the bits are doubled (h - MSB, a
@@ -72,8 +67,7 @@ inline void write_v_u16_11bits_to_utf8(const vector_u16 v_u16,
   const uint16_t one_byte_bitmask = one_byte_bytemask.to_bitmask();
 
   write_v_u16_11bits_to_utf8(v_u16, utf8_output,
-                             vector_u8::vector_type(one_byte_bytemask.value),
-                             one_byte_bitmask);
+                             as_vector_u8(one_byte_bytemask), one_byte_bitmask);
 }
 
 std::pair<const char *const, char *const>
@@ -111,12 +105,12 @@ ppc64_convert_latin1_to_utf8(const char *latin_input,
 
     // assuming a/b are bytes and A/B are uint16 of the same value
     // aaaa_aaaa_bbbb_bbbb -> AAAA_AAAA
-    const vector_u16 v_u16_latin_1_half = vector_u16::vector_type(
-        latin_1_half_into_u16_byte_mask.lookup_32(v_latin, v_00).value);
+    const vector_u16 v_u16_latin_1_half =
+        as_vector_u16(latin_1_half_into_u16_byte_mask.lookup_32(v_latin, v_00));
 
     // aaaa_aaaa_bbbb_bbbb -> BBBB_BBBB
-    const vector_u16 v_u16_latin_2_half = vector_u16::vector_type(
-        latin_2_half_into_u16_byte_mask.lookup_32(v_latin, v_00).value);
+    const vector_u16 v_u16_latin_2_half =
+        as_vector_u16(latin_2_half_into_u16_byte_mask.lookup_32(v_latin, v_00));
 
     write_v_u16_11bits_to_utf8(v_u16_latin_1_half, utf8_output, v_0000, v_ff80);
     write_v_u16_11bits_to_utf8(v_u16_latin_2_half, utf8_output, v_0000, v_ff80);
@@ -134,8 +128,8 @@ ppc64_convert_latin1_to_utf8(const char *latin_input,
     } else {
       // assuming a/b are bytes and A/B are uint16 of the same value
       // aaaa_aaaa_bbbb_bbbb -> AAAA_AAAA
-      const auto v_u16_latin_1_half = vector_u16::vector_type(
-          latin_1_half_into_u16_byte_mask.lookup_32(v_latin, v_00).value);
+      const auto v_u16_latin_1_half = as_vector_u16(
+          latin_1_half_into_u16_byte_mask.lookup_32(v_latin, v_00));
 
       write_v_u16_11bits_to_utf8(v_u16_latin_1_half, utf8_output, v_0000,
                                  v_ff80);
