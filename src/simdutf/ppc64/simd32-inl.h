@@ -54,6 +54,7 @@ template <typename T> struct base32_numeric : base32<T> {
   static simdutf_really_inline simd32<T> splat(T _value) {
     return vec_splats(_value);
   }
+
   static simdutf_really_inline simd32<T> zero() { return splat(0); }
 
   template <typename U>
@@ -62,13 +63,9 @@ template <typename T> struct base32_numeric : base32<T> {
   }
 
   simdutf_really_inline base32_numeric() : base32<T>() {}
+
   simdutf_really_inline base32_numeric(const vector_type _value)
       : base32<T>(_value) {}
-
-  // Override to distinguish from bool version
-  simdutf_really_inline simd32<T> operator~() const {
-    return *this ^ 0xffffffffffu;
-  }
 
   // Addition/subtraction are the same for signed and unsigned
   simdutf_really_inline simd32<T> operator+(const simd32<T> other) const {
@@ -118,8 +115,6 @@ template <> struct simd32<bool> : base32<bool> {
     return (vector_type)vec_splats(uint32_t(-(!!_value)));
   }
 
-  simdutf_really_inline simd32() : base32() {}
-
   simdutf_really_inline simd32(const vector_type _value)
       : base32<bool>(_value) {}
 
@@ -150,113 +145,24 @@ template <> struct simd32<bool> : base32<bool> {
 // Unsigned code units
 template <> struct simd32<uint32_t> : base32_numeric<uint32_t> {
   simdutf_really_inline simd32() : base32_numeric<uint32_t>() {}
+
   simdutf_really_inline simd32(const vector_type _value)
       : base32_numeric<uint32_t>(_value) {}
 
   // Splat constructor
   simdutf_really_inline simd32(uint32_t _value) : simd32(splat(_value)) {}
+
   // Array constructor
-  simdutf_really_inline simd32(const uint32_t *values) : simd32(load(values)) {}
   simdutf_really_inline simd32(const char32_t *values)
       : simd32(load(reinterpret_cast<const uint32_t *>(values))) {}
-  // Member-by-member initialization
-  simdutf_really_inline simd32(uint32_t v0, uint32_t v1, uint32_t v2,
-                               uint32_t v3)
-      : simd32((vector_type){v0, v1, v2, v3}) {}
-
-  // Repeat 32 values as many times as necessary (usually for lookup tables)
-  simdutf_really_inline static simd32<uint32_t>
-  repeat_32(uint32_t v0, uint32_t v1, uint32_t v2, uint32_t v3) {
-    return simd32<uint32_t>(v0, v1, v2, v3);
-  }
-
-  // Saturated math
-  simdutf_really_inline simd32<uint32_t>
-  saturating_add(const simd32<uint32_t> other) const {
-    return vec_adds(this->value, other.value);
-  }
-  simdutf_really_inline simd32<uint32_t>
-  saturating_sub(const simd32<uint32_t> other) const {
-    return vec_subs(this->value, other.value);
-  }
-
-  // Order-specific operations
-  simdutf_really_inline simd32<uint32_t>
-  max_val(const simd32<uint32_t> other) const {
-    return vec_max(this->value, other.value);
-  }
-  simdutf_really_inline simd32<uint32_t>
-  min_val(const simd32<uint32_t> other) const {
-    return vec_min(this->value, other.value);
-  }
-  // Same as >, but only guarantees true is nonzero (< guarantees true = -1)
-  simdutf_really_inline simd32<uint32_t>
-  gt_bits(const simd32<uint32_t> other) const {
-    return this->saturating_sub(other);
-  }
-  // Same as <, but only guarantees true is nonzero (< guarantees true = -1)
-  simdutf_really_inline simd32<uint32_t>
-  lt_bits(const simd32<uint32_t> other) const {
-    return other.saturating_sub(*this);
-  }
 
   // Bit-specific operations
-  simdutf_really_inline simd32<bool> bits_not_set() const {
-    return *this == uint32_t(0);
-  }
-  simdutf_really_inline simd32<bool> bits_not_set(simd32<uint32_t> bits) const {
-    return (*this & bits).bits_not_set();
-  }
-  simdutf_really_inline simd32<bool> any_bits_set() const {
-    return ~this->bits_not_set();
-  }
-  simdutf_really_inline simd32<bool> any_bits_set(simd32<uint32_t> bits) const {
-    return ~this->bits_not_set(bits);
-  }
-
-  simdutf_really_inline bool bits_not_set_anywhere() const {
-    const vec_u64_t tmp = vec_u64_t(this->value);
-
-    return (tmp[0] | tmp[1]) == 0;
-  }
-  simdutf_really_inline bool any_bits_set_anywhere() const {
-    return !bits_not_set_anywhere();
-  }
-  simdutf_really_inline bool
-  bits_not_set_anywhere(simd32<uint32_t> bits) const {
-    const vec_u64_t tmp = vec_u64_t(vec_and(this->value, bits.value));
-
-    return (tmp[0] | tmp[1]) == 0;
-  }
-  simdutf_really_inline bool
-  any_bits_set_anywhere(simd32<uint32_t> bits) const {
-    return !bits_not_set_anywhere(bits);
-  }
   template <int N> simdutf_really_inline simd32<uint32_t> shr() const {
     return vec_sr(value, vec_splats(uint32_t(N)));
   }
+
   template <int N> simdutf_really_inline simd32<uint32_t> shl() const {
     return vec_sl(value, vec_splats(uint32_t(N)));
-  }
-  // Get one of the bits and make a bitmask out of it.
-  // e.g. value.get_bit<7>() gets the high bit
-  template <int N> simdutf_really_inline int get_bit() const {
-    if (N >= 0 and N <= 15) {
-      const vec_u8_t perm_mask = {
-          0 * 8 + N,  1 * 8 + N,  2 * 8 + N,  3 * 8 + N, 4 * 8 + N,  5 * 8 + N,
-          6 * 8 + N,  7 * 8 + N,  8 * 8 + N,  9 * 8 + N, 10 * 8 + N, 11 * 8 + N,
-          12 * 8 + N, 13 * 8 + N, 14 * 8 + N, 15 * 8 + N};
-
-      const vec_u64_t result =
-          (vec_u64_t)vec_vbpermq((vec_u8_t)this->value, perm_mask);
-#ifdef __LITTLE_ENDIAN__
-      return static_cast<int>(result[1]);
-#else
-      return static_cast<int>(result[0]);
-#endif
-    } else {
-      return 0;
-    }
   }
 
   // Change the endianness
