@@ -27,6 +27,16 @@ must_be_2_3_continuation(const simd8<uint8_t> prev2,
   return simd8<bool>(is_third_byte | is_fourth_byte);
 }
 
+/// ErrorReporting describes behaviour of a vectorized procedure regarding error
+/// checking
+enum class ErrorReporting {
+  precise,    // the procedure will report *approximate* or *precise* error
+              // position
+  at_the_end, // the procedure will only inform about an error after scanning
+              // the whole input (or its significant portion)
+  none,       // no error checking is done, we assume valid inputs
+};
+
 #include "ppc64_validate_utf16.cpp"
 #include "ppc64_convert_latin1_to_utf8.cpp"
 #include "ppc64_convert_latin1_to_utf16.cpp"
@@ -66,6 +76,8 @@ must_be_2_3_continuation(const simd8<uint8_t> prev2,
   #include "generic/utf8_to_latin1/utf8_to_latin1.h"
   #include "generic/utf8_to_latin1/valid_utf8_to_latin1.h"
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
+
+#include "templates.cpp"
 
 #ifdef SIMDUTF_INTERNAL_TESTS
   #if SIMDUTF_FEATURE_BASE64
@@ -460,98 +472,36 @@ simdutf_warn_unused size_t implementation::convert_valid_utf16le_to_latin1(
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF16
 simdutf_warn_unused size_t implementation::convert_utf16le_to_utf8(
     const char16_t *buf, size_t len, char *utf8_output) const noexcept {
-  std::pair<const char16_t *, char *> ret =
-      ppc64_convert_utf16_to_utf8<endianness::LITTLE>(buf, len, utf8_output);
-  if (ret.first == nullptr) {
-    return 0;
-  }
-  size_t saved_bytes = ret.second - utf8_output;
-  if (ret.first != buf + len) {
-    const size_t scalar_saved_bytes =
-        scalar::utf16_to_utf8::convert<endianness::LITTLE>(
-            ret.first, len - (ret.first - buf), ret.second);
-    if (scalar_saved_bytes == 0) {
-      return 0;
-    }
-    saved_bytes += scalar_saved_bytes;
-  }
-  return saved_bytes;
+
+  return convert_impl(ppc64_convert_utf16_to_utf8<endianness::LITTLE>,
+                      scalar::utf16_to_utf8::convert<endianness::LITTLE>, buf,
+                      len, utf8_output);
 }
 
 simdutf_warn_unused size_t implementation::convert_utf16be_to_utf8(
     const char16_t *buf, size_t len, char *utf8_output) const noexcept {
-  std::pair<const char16_t *, char *> ret =
-      ppc64_convert_utf16_to_utf8<endianness::BIG>(buf, len, utf8_output);
-  if (ret.first == nullptr) {
-    return 0;
-  }
-  size_t saved_bytes = ret.second - utf8_output;
-  if (ret.first != buf + len) {
-    const size_t scalar_saved_bytes =
-        scalar::utf16_to_utf8::convert<endianness::BIG>(
-            ret.first, len - (ret.first - buf), ret.second);
-    if (scalar_saved_bytes == 0) {
-      return 0;
-    }
-    saved_bytes += scalar_saved_bytes;
-  }
-  return saved_bytes;
+
+  return convert_impl(ppc64_convert_utf16_to_utf8<endianness::BIG>,
+                      scalar::utf16_to_utf8::convert<endianness::BIG>, buf, len,
+                      utf8_output);
 }
 
 simdutf_warn_unused result implementation::convert_utf16le_to_utf8_with_errors(
     const char16_t *buf, size_t len, char *utf8_output) const noexcept {
-  // ret.first.count is always the position in the buffer, not the number of
-  // code units written even if finished
-  std::pair<result, char *> ret =
-      ppc64_convert_utf16_to_utf8_with_errors<endianness::LITTLE>(buf, len,
-                                                                  utf8_output);
-  if (ret.first.error) {
-    return ret.first;
-  } // Can return directly since scalar fallback already found correct
-    // ret.first.count
-  if (ret.first.count != len) { // All good so far, but not finished
-    result scalar_res =
-        scalar::utf16_to_utf8::convert_with_errors<endianness::LITTLE>(
-            buf + ret.first.count, len - ret.first.count, ret.second);
-    if (scalar_res.error) {
-      scalar_res.count += ret.first.count;
-      return scalar_res;
-    } else {
-      ret.second += scalar_res.count;
-    }
-  }
-  ret.first.count =
-      ret.second -
-      utf8_output; // Set count to the number of 8-bit code units written
-  return ret.first;
+
+  return convert_with_errors_impl(
+      ppc64_convert_utf16_to_utf8<endianness::LITTLE>,
+      scalar::utf16_to_utf8::convert_with_errors<endianness::LITTLE>, buf, len,
+      utf8_output);
 }
 
 simdutf_warn_unused result implementation::convert_utf16be_to_utf8_with_errors(
     const char16_t *buf, size_t len, char *utf8_output) const noexcept {
-  // ret.first.count is always the position in the buffer, not the number of
-  // code units written even if finished
-  std::pair<result, char *> ret =
-      ppc64_convert_utf16_to_utf8_with_errors<endianness::BIG>(buf, len,
-                                                               utf8_output);
-  if (ret.first.error) {
-    return ret.first;
-  } // Can return directly since scalar fallback already found correct
-    // ret.first.count
-  if (ret.first.count != len) { // All good so far, but not finished
-    result scalar_res =
-        scalar::utf16_to_utf8::convert_with_errors<endianness::BIG>(
-            buf + ret.first.count, len - ret.first.count, ret.second);
-    if (scalar_res.error) {
-      scalar_res.count += ret.first.count;
-      return scalar_res;
-    } else {
-      ret.second += scalar_res.count;
-    }
-  }
-  ret.first.count =
-      ret.second -
-      utf8_output; // Set count to the number of 8-bit code units written
-  return ret.first;
+
+  return convert_with_errors_impl(
+      ppc64_convert_utf16_to_utf8<endianness::BIG>,
+      scalar::utf16_to_utf8::convert_with_errors<endianness::BIG>, buf, len,
+      utf8_output);
 }
 
 simdutf_warn_unused size_t implementation::convert_valid_utf16le_to_utf8(
@@ -616,56 +566,6 @@ simdutf_warn_unused size_t implementation::convert_valid_utf32_to_latin1(
 #endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
-template <typename VectorizedConvert, typename ScalarConvert, typename Source,
-          typename Destination>
-size_t convert_impl(VectorizedConvert vectorized_convert,
-                    ScalarConvert scalar_convert, const Source *buf, size_t len,
-                    Destination *output) {
-  const auto vr = vectorized_convert(buf, len, output);
-  const size_t consumed = vr.input - buf;
-  const size_t written = vr.output - output;
-  if (vr.err != error_code::SUCCESS) {
-    return 0;
-  }
-
-  if (consumed == len) {
-    return written;
-  }
-
-  const auto ret = scalar_convert(vr.input, len - consumed, vr.output);
-  if (ret == 0) {
-    return 0;
-  }
-
-  return written + ret;
-}
-
-template <typename VectorizedConvert, typename ScalarConvert, typename Source,
-          typename Destination>
-result convert_with_errors_impl(VectorizedConvert vectorized_convert,
-                                ScalarConvert scalar_convert, const Source *buf,
-                                size_t len, Destination *output) {
-  const auto vr = vectorized_convert(buf, len, output);
-  const size_t consumed = vr.input - buf;
-  const size_t written = vr.output - output;
-  if (vr.err != error_code::SUCCESS) {
-    return result(vr.err, consumed);
-  }
-
-  if (consumed == len) {
-    return result(error_code::SUCCESS, written);
-  }
-
-  result sr = scalar_convert(vr.input, len - consumed, vr.output);
-  if (sr.is_ok()) {
-    sr.count += written;
-  } else {
-    sr.count += consumed;
-  }
-
-  return sr;
-}
-
 simdutf_warn_unused size_t implementation::convert_utf32_to_utf8(
     const char32_t *buf, size_t len, char *utf8_output) const noexcept {
   return convert_impl(ppc64_convert_utf32_to_utf8<ErrorReporting::at_the_end>,

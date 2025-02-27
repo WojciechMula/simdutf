@@ -1,11 +1,3 @@
-/// ErrorReporting describes behaviour of a procedure regarding error checking
-enum class ErrorReporting {
-  precise,    // the procedure will report *approximate* error position
-  at_the_end, // the procedure will only inform about an error after scanning
-              // the whole input
-  none,       // no error checking is done
-};
-
 struct utf32_to_utf16_t {
   error_code err;
   const char32_t *input;

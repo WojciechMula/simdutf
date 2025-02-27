@@ -13,7 +13,7 @@ utf16_to_utf32_t ppc64_convert_utf16_to_utf32(const char16_t *buf, size_t len,
   const auto v_d800 = vector_u16::splat(0xd800);
   const auto zero = vector_u8::zero();
 
-  while (end - buf >= 8) {
+  while (end - buf >= vector_u16::ELEMENTS) {
     auto in = vector_u16::load(buf);
     if (not match_system(big_endian)) {
       in = in.swap_bytes();
