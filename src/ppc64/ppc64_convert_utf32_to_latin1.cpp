@@ -5,15 +5,15 @@ std::pair<const char32_t *, char *>
     simdutf_really_inline ppc64_convert_utf32_to_latin1(const char32_t *buf,
                                                         size_t len,
                                                         char *latin1_output) {
-  const size_t rounded_len = len & ~0xF; // Round down to nearest multiple of 16
+  const size_t rounded_len = align_down<4 * vector_u32::ELEMENTS>(len);
 
   const auto high_bytes_mask = vector_u32::splat(0xFFFFFF00);
 
-  for (size_t i = 0; i < rounded_len; i += 16) {
-    const auto in1 = vector_u32::load(buf);
-    const auto in2 = vector_u32::load(buf + 4);
-    const auto in3 = vector_u32::load(buf + 8);
-    const auto in4 = vector_u32::load(buf + 12);
+  for (size_t i = 0; i < rounded_len; i += 4 * vector_u32::ELEMENTS) {
+    const auto in1 = vector_u32::load(buf + 0 * vector_u32::ELEMENTS);
+    const auto in2 = vector_u32::load(buf + 1 * vector_u32::ELEMENTS);
+    const auto in3 = vector_u32::load(buf + 2 * vector_u32::ELEMENTS);
+    const auto in4 = vector_u32::load(buf + 3 * vector_u32::ELEMENTS);
 
     if (ec == ErrorChecking::enabled) {
       const auto combined = in1 | in2 | in3 | in4;

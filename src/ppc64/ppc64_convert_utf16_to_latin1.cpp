@@ -7,7 +7,6 @@ struct utf16_to_latin1_t {
 template <endianness big_endian>
 utf16_to_latin1_t ppc64_convert_utf16_to_latin1(const char16_t *buf, size_t len,
                                                 char *latin1_output) {
-  const char16_t *start = buf;
   const char16_t *end = buf + len;
   while (end - buf >= 8) {
     // Load 8 x UTF-16 characters

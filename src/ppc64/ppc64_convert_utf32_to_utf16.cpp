@@ -43,7 +43,7 @@ utf32_to_utf16_t ppc64_convert_utf32_to_utf16(const char32_t *buf, size_t len,
         if (not forbidden.is_zero()) {
           // scalar procedure will rescan the portion of buffer we've just
           // analysed
-          return utf32_to_utf16_t{error_code::SURROGATE, buf, utf16_output};
+          return utf32_to_utf16_t{error_code::OTHER, buf, utf16_output};
         }
         break;
       case ErrorReporting::at_the_end:
