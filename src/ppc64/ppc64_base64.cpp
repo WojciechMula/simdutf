@@ -544,62 +544,38 @@ size_t encode_base64(char *dst, const char *src, size_t srclen,
   uint8_t *out = (uint8_t *)dst;
 
   size_t i = 0;
-  /*for (; i + 52 <= srclen; i += 48) {
-    __m128i in0 = _mm_loadu_si128(
-        reinterpret_cast<const __m128i *>(input + i + 4 * 3 * 0));
-    __m128i in1 = _mm_loadu_si128(
-        reinterpret_cast<const __m128i *>(input + i + 4 * 3 * 1));
-    __m128i in2 = _mm_loadu_si128(
-        reinterpret_cast<const __m128i *>(input + i + 4 * 3 * 2));
-    __m128i in3 = _mm_loadu_si128(
-        reinterpret_cast<const __m128i *>(input + i + 4 * 3 * 3));
+  for (; i + 52 <= srclen; i += 48) {
+    const auto in0 = vector_u8::load(input + i + 12 * 0);
+    const auto in1 = vector_u8::load(input + i + 12 * 1);
+    const auto in2 = vector_u8::load(input + i + 12 * 2);
+    const auto in3 = vector_u8::load(input + i + 12 * 3);
 
-    in0 = _mm_shuffle_epi8(in0, shuf);
-    in1 = _mm_shuffle_epi8(in1, shuf);
-    in2 = _mm_shuffle_epi8(in2, shuf);
-    in3 = _mm_shuffle_epi8(in3, shuf);
+    const auto expanded0 = encoding_expand_6bit_fields(in0);
+    const auto expanded1 = encoding_expand_6bit_fields(in1);
+    const auto expanded2 = encoding_expand_6bit_fields(in2);
+    const auto expanded3 = encoding_expand_6bit_fields(in3);
 
-    const __m128i t0_0 = _mm_and_si128(in0, _mm_set1_epi32(0x0fc0fc00));
-    const __m128i t0_1 = _mm_and_si128(in1, _mm_set1_epi32(0x0fc0fc00));
-    const __m128i t0_2 = _mm_and_si128(in2, _mm_set1_epi32(0x0fc0fc00));
-    const __m128i t0_3 = _mm_and_si128(in3, _mm_set1_epi32(0x0fc0fc00));
+    const auto base64_0 =
+        encoding_translate_6bit_values<isbase64url>(expanded0);
+    const auto base64_1 =
+        encoding_translate_6bit_values<isbase64url>(expanded1);
+    const auto base64_2 =
+        encoding_translate_6bit_values<isbase64url>(expanded2);
+    const auto base64_3 =
+        encoding_translate_6bit_values<isbase64url>(expanded3);
 
-    const __m128i t1_0 = _mm_mulhi_epu16(t0_0, _mm_set1_epi32(0x04000040));
-    const __m128i t1_1 = _mm_mulhi_epu16(t0_1, _mm_set1_epi32(0x04000040));
-    const __m128i t1_2 = _mm_mulhi_epu16(t0_2, _mm_set1_epi32(0x04000040));
-    const __m128i t1_3 = _mm_mulhi_epu16(t0_3, _mm_set1_epi32(0x04000040));
-
-    const __m128i t2_0 = _mm_and_si128(in0, _mm_set1_epi32(0x003f03f0));
-    const __m128i t2_1 = _mm_and_si128(in1, _mm_set1_epi32(0x003f03f0));
-    const __m128i t2_2 = _mm_and_si128(in2, _mm_set1_epi32(0x003f03f0));
-    const __m128i t2_3 = _mm_and_si128(in3, _mm_set1_epi32(0x003f03f0));
-
-    const __m128i t3_0 = _mm_mullo_epi16(t2_0, _mm_set1_epi32(0x01000010));
-    const __m128i t3_1 = _mm_mullo_epi16(t2_1, _mm_set1_epi32(0x01000010));
-    const __m128i t3_2 = _mm_mullo_epi16(t2_2, _mm_set1_epi32(0x01000010));
-    const __m128i t3_3 = _mm_mullo_epi16(t2_3, _mm_set1_epi32(0x01000010));
-
-    const __m128i input0 = _mm_or_si128(t1_0, t3_0);
-    const __m128i input1 = _mm_or_si128(t1_1, t3_1);
-    const __m128i input2 = _mm_or_si128(t1_2, t3_2);
-    const __m128i input3 = _mm_or_si128(t1_3, t3_3);
-
-    _mm_storeu_si128(reinterpret_cast<__m128i *>(out),
-                     lookup_pshufb_improved<isbase64url>(input0));
+    base64_0.store(out);
     out += 16;
 
-    _mm_storeu_si128(reinterpret_cast<__m128i *>(out),
-                     lookup_pshufb_improved<isbase64url>(input1));
+    base64_1.store(out);
     out += 16;
 
-    _mm_storeu_si128(reinterpret_cast<__m128i *>(out),
-                     lookup_pshufb_improved<isbase64url>(input2));
+    base64_2.store(out);
     out += 16;
 
-    _mm_storeu_si128(reinterpret_cast<__m128i *>(out),
-                     lookup_pshufb_improved<isbase64url>(input3));
+    base64_3.store(out);
     out += 16;
-  }*/
+  }
   for (; i + 16 <= srclen; i += 12) {
     const auto in = vector_u8::load(input + i);
     const auto expanded = encoding_expand_6bit_fields(in);
