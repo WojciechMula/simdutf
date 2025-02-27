@@ -9,6 +9,10 @@ namespace ppc64 {
 
 namespace {
 using namespace simdutf;
+
+template <size_t N> simdutf_really_inline size_t align_down(size_t size) {
+  return N * (size / N);
+}
 } // namespace
 
 class implementation final : public simdutf::implementation {
