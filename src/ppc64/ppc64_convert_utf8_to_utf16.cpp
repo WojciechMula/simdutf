@@ -31,13 +31,12 @@ size_t convert_masked_utf8_to_utf16(const char *input,
   }
   if (((utf8_end_of_code_point_mask & 0xFFFF) == 0xaaaa)) {
     // We want to take 8 2-byte UTF-8 code units and turn them into 8 2-byte
-    // UTF-16 code units. There is probably a more efficient sequence, but the
-    // following might do.
+    // UTF-16 code units.
     const auto in16 = as_vector_u16(in);
     const auto lo = in16 & uint16_t(0x007f);
-    const auto hi = in16 & uint16_t(0x1f00);
+    const auto hi = in16.shr<2>();
 
-    auto composed = lo | hi.shr<2>();
+    auto composed = select(uint16_t(0x1f00 >> 2), hi, lo);
     if (!match_system(big_endian)) {
       composed = composed.swap_bytes();
     }

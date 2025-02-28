@@ -2,11 +2,6 @@ struct utf32_to_utf8_t {
   error_code err;
   const char32_t *input;
   char *output;
-
-  void dump() const {
-    printf("utf32_to_utf8_t{error_code = %d, input = %p, output = %p}\n", err,
-           input, output);
-  }
 };
 
 template <ErrorReporting er>
