@@ -1,19 +1,24 @@
 enum class ErrorChecking { disabled, enabled };
 
+struct utf32_to_latin1_t {
+  error_code err;
+  const char32_t *input;
+  char *output;
+};
+
 template <ErrorChecking ec>
-std::pair<const char32_t *, char *>
-    simdutf_really_inline ppc64_convert_utf32_to_latin1(const char32_t *buf,
-                                                        size_t len,
-                                                        char *latin1_output) {
-  const size_t rounded_len = align_down<4 * vector_u32::ELEMENTS>(len);
+utf32_to_latin1_t simdutf_really_inline ppc64_convert_utf32_to_latin1(
+    const char32_t *buf, size_t len, char *latin1_output) {
+  constexpr size_t N = vector_u32::ELEMENTS;
+  const size_t rounded_len = align_down<4 * N>(len);
 
   const auto high_bytes_mask = vector_u32::splat(0xFFFFFF00);
 
-  for (size_t i = 0; i < rounded_len; i += 4 * vector_u32::ELEMENTS) {
-    const auto in1 = vector_u32::load(buf + 0 * vector_u32::ELEMENTS);
-    const auto in2 = vector_u32::load(buf + 1 * vector_u32::ELEMENTS);
-    const auto in3 = vector_u32::load(buf + 2 * vector_u32::ELEMENTS);
-    const auto in4 = vector_u32::load(buf + 3 * vector_u32::ELEMENTS);
+  for (size_t i = 0; i < rounded_len; i += 4 * N) {
+    const auto in1 = vector_u32::load(buf + 0 * N);
+    const auto in2 = vector_u32::load(buf + 1 * N);
+    const auto in3 = vector_u32::load(buf + 2 * N);
+    const auto in4 = vector_u32::load(buf + 3 * N);
 
     if (ec == ErrorChecking::enabled) {
       const auto combined = in1 | in2 | in3 | in4;
@@ -22,7 +27,7 @@ std::pair<const char32_t *, char *>
       if (simdutf_unlikely(too_big.any())) {
         // Scalar code will carry on from the beginning of the current block
         // and report the exact error position.
-        break;
+        return utf32_to_latin1_t{error_code::OTHER, buf, latin1_output};
       }
     }
 
@@ -37,9 +42,9 @@ std::pair<const char32_t *, char *>
     const auto merged = lo | hi;
 
     merged.store(latin1_output);
-    latin1_output += 16;
-    buf += 16;
+    latin1_output += 4 * N;
+    buf += 4 * N;
   }
 
-  return std::make_pair(buf, latin1_output);
+  return utf32_to_latin1_t{error_code::SUCCESS, buf, latin1_output};
 }
