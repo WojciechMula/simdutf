@@ -60,10 +60,9 @@ size_t convert_masked_utf8_to_utf16(const char *input,
     const auto perm =
         as_vector_u32(sh.lookup_32(in, vector_u8::zero())).swap_bytes();
     const auto b0 = perm & uint32_t(0x0000007f);
-    const auto b1 = perm & uint32_t(0x00003f00);
-    const auto b2 = perm & uint32_t(0x000f0000);
-
-    const auto composed = b0 | b1.shr<2>() | b2.shr<4>();
+    const auto b1 = select(uint32_t(0x00003f00 >> 2), perm.shr<2>(), b0);
+    const auto b2 = select(uint32_t(0x000f0000 >> 4), perm.shr<4>(), b1);
+    const auto composed = b2;
     auto packed = vector_u32::pack(composed, composed);
 
     if (!match_system(big_endian)) {
