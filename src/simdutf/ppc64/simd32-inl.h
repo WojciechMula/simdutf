@@ -170,6 +170,11 @@ template <> struct simd32<uint32_t> : base32_numeric<uint32_t> {
     return vec_revb(value);
   }
 
+  simdutf_really_inline uint64_t sum() const {
+    return uint64_t(value[0]) + uint64_t(value[1]) + uint64_t(value[2]) +
+           uint64_t(value[3]);
+  }
+
   static simdutf_really_inline simd16<uint16_t>
   pack(const simd32<uint32_t> &v0, const simd32<uint32_t> &v1) {
     return vec_packs(v0.value, v1.value);
@@ -224,4 +229,9 @@ template <typename T, typename U> simd32<T> operator^(const simd32<T> a, U b) {
 
 template <typename T> simd32<T> max_val(const simd32<T> a, const simd32<T> b) {
   return vec_max(a.value, b.value);
+}
+
+template <typename T>
+simdutf_really_inline simd32<T> min(const simd32<T> b, const simd32<T> a) {
+  return vec_min(a.value, b.value);
 }

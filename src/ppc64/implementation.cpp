@@ -67,6 +67,7 @@ enum class ErrorReporting {
 #include "generic/utf8_to_utf32/utf8_to_utf32.h"
 #include "generic/utf8_to_utf32/valid_utf8_to_utf32.h"
 // other functions
+#include "generic/utf32.h"
 #include "generic/utf16.h"
 #include "generic/validate_utf16.h"
 #include "generic/utf8.h"
@@ -674,7 +675,7 @@ simdutf_warn_unused size_t implementation::utf16_length_from_utf8(
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 simdutf_warn_unused size_t implementation::utf8_length_from_utf32(
     const char32_t *input, size_t length) const noexcept {
-  return scalar::utf32::utf8_length_from_utf32(input, length);
+  return utf32::utf8_length_from_utf32(input, length);
 }
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32
 
