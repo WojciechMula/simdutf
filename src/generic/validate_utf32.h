@@ -3,59 +3,70 @@ namespace SIMDUTF_IMPLEMENTATION {
 namespace {
 namespace utf32 {
 
-simdutf_really_inline const char32_t *validate_utf32(const char32_t *input,
-                                                     size_t size) {
+simdutf_really_inline bool validate(const char32_t *input, size_t size) {
+  if (simdutf_unlikely(size == 0)) {
+    // empty input is valid UTF-32. protect the implementation from
+    // handling nullptr
+    return true;
+  }
+
   const char32_t *end = input + size;
 
-  using Vector = simd32<uint32_t>;
+  using vector_u32 = simd32<uint32_t>;
 
-  const auto standardmax = Vector::splat(0x10ffff);
-  const auto offset = Vector::splat(0xffff2000);
-  const auto standardoffsetmax = Vector::splat(0xfffff7ff);
-  auto currentmax = Vector();
-  auto currentoffsetmax = Vector();
+  const auto standardmax = vector_u32::splat(0x10ffff);
+  const auto offset = vector_u32::splat(0xffff2000);
+  const auto standardoffsetmax = vector_u32::splat(0xfffff7ff);
+  auto currentmax = vector_u32::zero();
+  auto currentoffsetmax = vector_u32::zero();
 
-  constexpr size_t N = Vector::ELEMENTS;
+  constexpr size_t N = vector_u32::ELEMENTS;
 
   while (input + N < end) {
-    auto in = Vector(input);
+    auto in = vector_u32(input);
     if (!match_system(endianness::BIG)) {
       in.swap_bytes();
     }
 
-    currentmax = max_val(currentmax, in);
-    currentoffsetmax = max_val(currentoffsetmax, in + offset);
+    currentmax = max(currentmax, in);
+    currentoffsetmax = max(currentoffsetmax, in + offset);
     input += N;
   }
 
   const auto too_large = currentmax > standardmax;
   if (too_large.any()) {
-    return nullptr;
+    return false;
   }
 
   const auto surrogate = currentoffsetmax > standardoffsetmax;
   if (surrogate.any()) {
-    return nullptr;
+    return false;
   }
 
-  return input;
+  return scalar::utf32::validate(input, end - input);
 }
 
-simdutf_really_inline result validate_utf32_with_errors(const char32_t *input,
-                                                        size_t size) {
+simdutf_really_inline result validate_with_errors(const char32_t *input,
+                                                  size_t size) {
+  if (simdutf_unlikely(size == 0)) {
+    // empty input is valid UTF-32. protect the implementation from
+    // handling nullptr
+    return result(error_code::SUCCESS, 0);
+  }
+
   const char32_t *start = input;
   const char32_t *end = input + size;
 
-  using Vector = simd32<uint32_t>;
+  using vector_u32 = simd32<uint32_t>;
 
-  const auto standardmax = Vector::splat(0x10ffff);
-  const auto offset = Vector::splat(0xffff2000);
-  const auto standardoffsetmax = Vector::splat(0xfffff7ff);
+  const auto standardmax = vector_u32::splat(0x10ffff);
+  const auto offset = vector_u32::splat(0xffff2000);
+  const auto standardoffsetmax = vector_u32::splat(0xfffff7ff);
 
-  constexpr size_t N = Vector::ELEMENTS;
+  constexpr size_t N = vector_u32::ELEMENTS;
 
   while (input + N < end) {
-    auto in = Vector(input);
+    auto in = vector_u32(input);
     if (!match_system(endianness::BIG)) {
       in.swap_bytes();
     }
@@ -65,14 +76,21 @@ simdutf_really_inline result validate_utf32_with_errors(const char32_t *input,
 
     const auto combined = too_large | surrogate;
     if (simdutf_unlikely(combined.any())) {
-      // scalar code will detect exact error and the position
-      return result(error_code::OTHER, input - start);
+      const size_t consumed = input - start;
+      auto sr = scalar::utf32::validate_with_errors(input, end - input);
+      sr.count += consumed;
+
+      return sr;
     }
 
     input += N;
   }
 
-  return result(error_code::SUCCESS, input - start);
+  const size_t consumed = input - start;
+  auto sr = scalar::utf32::validate_with_errors(input, end - input);
+  sr.count += consumed;
+
+  return sr;
 }
 
 } // namespace utf32
