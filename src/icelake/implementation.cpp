@@ -278,30 +278,37 @@ implementation::validate_utf16le(const char16_t *buf,
                                  size_t len) const noexcept {
   const char16_t *end = buf + len;
 
-  for (; end - buf >= 32;) {
-    __m512i in = _mm512_loadu_si512((__m512i *)buf);
-    __m512i diff = _mm512_sub_epi16(in, _mm512_set1_epi16(uint16_t(0xD800)));
-    __mmask32 surrogates =
-        _mm512_cmplt_epu16_mask(diff, _mm512_set1_epi16(uint16_t(0x0800)));
+  const auto idx = _mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7);
+
+  for (; end - buf >= 64;) {
+    const auto in0 = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(buf));
+    const auto in1 = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(buf + 32));
+
+    const auto t0 = _mm512_packus_epi16(_mm512_srli_epi16(in0, 8), _mm512_srli_epi16(in1, 8));
+    const auto in = _mm512_permutexvar_epi64(idx, t0);
+
+    __m512i diff = _mm512_sub_epi8(in, _mm512_set1_epi8(0xD8));
+    __mmask64 surrogates =
+        _mm512_cmplt_epu8_mask(diff, _mm512_set1_epi8(0x08));
     if (surrogates) {
-      __mmask32 highsurrogates =
-          _mm512_cmplt_epu16_mask(diff, _mm512_set1_epi16(uint16_t(0x0400)));
-      __mmask32 lowsurrogates = surrogates ^ highsurrogates;
+      __mmask64 highsurrogates =
+          _mm512_cmplt_epu8_mask(diff, _mm512_set1_epi8(0x04));
+      __mmask64 lowsurrogates = surrogates ^ highsurrogates;
       // high must be followed by low
       if ((highsurrogates << 1) != lowsurrogates) {
         return false;
       }
-      bool ends_with_high = ((highsurrogates & 0x80000000) != 0);
+      bool ends_with_high = ((highsurrogates & 0x8000000000000000llu) != 0);
       if (ends_with_high) {
-        buf += 31; // advance only by 31 code units so that we start with the
-                   // high surrogate on the next round.
+        buf += 63;
       } else {
-        buf += 32;
+        buf += 64;
       }
     } else {
-      buf += 32;
+      buf += 64;
     }
   }
+
   if (buf < end) {
     __m512i in =
         _mm512_maskz_loadu_epi16((1U << (end - buf)) - 1, (__m512i *)buf);
