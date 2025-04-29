@@ -1,103 +1,92 @@
 // file included directly
-template <endianness big_endian>
-size_t icelake_convert_utf16_to_latin1(const char16_t *buf, size_t len,
+enum class Validation {
+  None,
+  Boolean,
+  Result,
+};
+
+template <endianness big_endian, Validation validation>
+result icelake_convert_utf16_to_latin1(const char16_t *src, size_t len,
                                        char *latin1_output) {
-  const char16_t *end = buf + len;
-  __m512i v_0xFF = _mm512_set1_epi16(0xff);
-  __m512i byteflip = _mm512_setr_epi64(0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809);
-  __m512i shufmask = _mm512_set_epi8(
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38,
-      36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0);
-  while (end - buf >= 32) {
-    __m512i in = _mm512_loadu_si512((__m512i *)buf);
-    if (big_endian) {
-      in = _mm512_shuffle_epi8(in, byteflip);
-    }
-    if (_mm512_cmpgt_epu16_mask(in, v_0xFF)) {
-      return 0;
-    }
-    _mm256_storeu_si256(
-        (__m256i *)latin1_output,
-        _mm512_castsi512_si256(_mm512_permutexvar_epi8(shufmask, in)));
-    latin1_output += 32;
-    buf += 32;
-  }
-  if (buf < end) {
-    uint32_t mask(uint32_t(1 << (end - buf)) - 1);
-    __m512i in = _mm512_maskz_loadu_epi16(mask, buf);
-    if (big_endian) {
-      in = _mm512_shuffle_epi8(in, byteflip);
-    }
-    if (_mm512_cmpgt_epu16_mask(in, v_0xFF)) {
-      return 0;
-    }
-    _mm256_mask_storeu_epi8(
-        latin1_output, mask,
-        _mm512_castsi512_si256(_mm512_permutexvar_epi8(shufmask, in)));
-  }
-  return len;
-}
 
-template <endianness big_endian>
-std::pair<result, char *>
-icelake_convert_utf16_to_latin1_with_errors(const char16_t *buf, size_t len,
-                                            char *latin1_output) {
-  const char16_t *end = buf + len;
-  const char16_t *start = buf;
-  __m512i byteflip = _mm512_setr_epi64(0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809,
-                                       0x0607040502030001, 0x0e0f0c0d0a0b0809);
-  __m512i v_0xFF = _mm512_set1_epi16(0xff);
-  __m512i shufmask = _mm512_set_epi8(
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38,
-      36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0);
-  while (end - buf >= 32) {
-    __m512i in = _mm512_loadu_si512((__m512i *)buf);
-    if (big_endian) {
-      in = _mm512_shuffle_epi8(in, byteflip);
-    }
-    if (_mm512_cmpgt_epu16_mask(in, v_0xFF)) {
-      uint16_t word;
-      while ((word = (big_endian ? scalar::u16_swap_bytes(uint16_t(*buf))
-                                 : uint16_t(*buf))) <= 0xff) {
-        *latin1_output++ = uint8_t(word);
-        buf++;
-      }
-      return std::make_pair(result(error_code::TOO_LARGE, buf - start),
-                            latin1_output);
-    }
-    _mm256_storeu_si256(
-        (__m256i *)latin1_output,
-        _mm512_castsi512_si256(_mm512_permutexvar_epi8(shufmask, in)));
-    latin1_output += 32;
-    buf += 32;
-  }
-  if (buf < end) {
-    uint32_t mask(uint32_t(1 << (end - buf)) - 1);
-    __m512i in = _mm512_maskz_loadu_epi16(mask, buf);
-    if (big_endian) {
-      in = _mm512_shuffle_epi8(in, byteflip);
-    }
-    if (_mm512_cmpgt_epu16_mask(in, v_0xFF)) {
+  const char16_t *beg = src;
+  const char16_t *end = src + len;
 
-      uint16_t word;
-      while ((word = (big_endian ? scalar::u16_swap_bytes(uint16_t(*buf))
-                                 : uint16_t(*buf))) <= 0xff) {
-        *latin1_output++ = uint8_t(word);
-        buf++;
+  const __m512i zero = _mm512_setzero_si512();
+  const __m512i gather_byte0 = _mm512_set_epi8(
+      126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98,
+      96, 94, 92, 90, 88, 86, 84, 82, 80, 78, 76, 74, 72, 70, 68, 66, 64, 62,
+      60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26,
+      24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0);
+  const __m512i gather_byte1 = _mm512_set_epi8(
+      127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99,
+      97, 95, 93, 91, 89, 87, 85, 83, 81, 79, 77, 75, 73, 71, 69, 67, 65, 63,
+      61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33, 31, 29, 27,
+      25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1);
+
+  constexpr size_t unrolled_size = 2 * 32;
+  const size_t blocks = len / unrolled_size;
+
+  for (size_t i = 0; i < blocks; i++) {
+    const auto v0 =
+        _mm512_loadu_si512(reinterpret_cast<const __m512i *>(src + 0 * 32));
+    const auto v1 =
+        _mm512_loadu_si512(reinterpret_cast<const __m512i *>(src + 1 * 32));
+
+    const auto latin1 = _mm512_permutex2var_epi8(
+        v0, big_endian ? gather_byte1 : gather_byte0, v1);
+
+    if (validation != Validation::None) {
+      const auto msb = _mm512_permutex2var_epi8(
+          v0, big_endian ? gather_byte0 : gather_byte1, v1);
+      const auto err = _mm512_cmpgt_epu8_mask(msb, zero);
+      if (err != 0) {
+        switch (validation) {
+        case Validation::None:
+          return result(error_code::OTHER, 0);
+
+        case Validation::Boolean:
+          return result(error_code::TOO_LARGE, 0);
+
+        case Validation::Result:
+          return result(error_code::TOO_LARGE,
+                        src - beg + trailing_zeroes(err));
+        }
       }
-      return std::make_pair(result(error_code::TOO_LARGE, buf - start),
-                            latin1_output);
     }
-    _mm256_mask_storeu_epi8(
-        latin1_output, mask,
-        _mm512_castsi512_si256(_mm512_permutexvar_epi8(shufmask, in)));
+
+    _mm512_storeu_si512(reinterpret_cast<__m512i *>(latin1_output), latin1);
+
+    src += 2 * 32;
+    latin1_output += 64;
   }
-  return std::make_pair(result(error_code::SUCCESS, len), latin1_output);
+
+  const auto tail = len - blocks * unrolled_size;
+
+  switch (validation) {
+  case Validation::None:
+    scalar::utf16_to_latin1::convert_valid<big_endian>(src, tail,
+                                                       latin1_output);
+    return result(error_code::SUCCESS, len);
+
+  case Validation::Boolean: {
+    const auto ret =
+        scalar::utf16_to_latin1::convert<big_endian>(src, tail, latin1_output);
+    if (ret == 0) {
+      return result(error_code::TOO_LARGE, 0);
+    } else {
+      return result(error_code::SUCCESS, len);
+    }
+  }
+
+  case Validation::Result: {
+    auto ret = scalar::utf16_to_latin1::convert_with_errors<big_endian>(
+        src, tail, latin1_output);
+
+    // Since we load & store the same amount of code points in the vectorized code,
+    // thus we don't need to check whether `res` is OK or not.
+    ret.count += blocks * unrolled_size;
+    return ret;
+  }
+  }
 }

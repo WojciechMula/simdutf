@@ -869,42 +869,47 @@ simdutf_warn_unused size_t implementation::convert_valid_utf8_to_utf32(
 #if SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 simdutf_warn_unused size_t implementation::convert_utf16le_to_latin1(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  return icelake_convert_utf16_to_latin1<endianness::LITTLE>(buf, len,
-                                                             latin1_output);
+  const auto ret =
+      icelake_convert_utf16_to_latin1<endianness::LITTLE, Validation::Boolean>(
+          buf, len, latin1_output);
+  return ret.is_ok() ? ret.count : 0;
 }
 
 simdutf_warn_unused size_t implementation::convert_utf16be_to_latin1(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  return icelake_convert_utf16_to_latin1<endianness::BIG>(buf, len,
-                                                          latin1_output);
+  const auto ret =
+      icelake_convert_utf16_to_latin1<endianness::BIG, Validation::Boolean>(
+          buf, len, latin1_output);
+  return ret.is_ok() ? ret.count : 0;
 }
 
 simdutf_warn_unused result
 implementation::convert_utf16le_to_latin1_with_errors(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  return icelake_convert_utf16_to_latin1_with_errors<endianness::LITTLE>(
-             buf, len, latin1_output)
-      .first;
+  return icelake_convert_utf16_to_latin1<endianness::LITTLE,
+                                         Validation::Result>(buf, len,
+                                                             latin1_output);
 }
 
 simdutf_warn_unused result
 implementation::convert_utf16be_to_latin1_with_errors(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  return icelake_convert_utf16_to_latin1_with_errors<endianness::BIG>(
-             buf, len, latin1_output)
-      .first;
+  return icelake_convert_utf16_to_latin1<endianness::BIG, Validation::Result>(
+      buf, len, latin1_output);
 }
 
 simdutf_warn_unused size_t implementation::convert_valid_utf16be_to_latin1(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  // optimization opportunity: implement custom function
-  return convert_utf16be_to_latin1(buf, len, latin1_output);
+  icelake_convert_utf16_to_latin1<endianness::BIG, Validation::None>(
+      buf, len, latin1_output);
+  return len;
 }
 
 simdutf_warn_unused size_t implementation::convert_valid_utf16le_to_latin1(
     const char16_t *buf, size_t len, char *latin1_output) const noexcept {
-  // optimization opportunity: implement custom function
-  return convert_utf16le_to_latin1(buf, len, latin1_output);
+  icelake_convert_utf16_to_latin1<endianness::LITTLE, Validation::None>(
+      buf, len, latin1_output);
+  return len;
 }
 #endif // SIMDUTF_FEATURE_UTF16 && SIMDUTF_FEATURE_LATIN1
 
