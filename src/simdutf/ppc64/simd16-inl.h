@@ -78,10 +78,26 @@ template <> struct simd16<bool> : base16<bool> {
     return (tmp[0] | tmp[1]) == 0;
   }
 
-  simdutf_really_inline simd16<bool> &operator|=(const simd16<bool> rhs) {
+  simdutf_really_inline simd16 &operator|=(const simd16<bool> rhs) {
     value = vec_or(this->value, rhs.value);
     return *this;
   }
+
+  simdutf_really_inline simd16 operator~() const {
+    const auto neg = vec_xor(this->value, vec_splats(uint16_t(0xffff)));
+    return vector_type(neg);
+  }
+
+  template <unsigned N> simdutf_really_inline simd16 byte_right_shift() const {
+    const vec_u8_t zero = vec_splats(uint8_t(0));
+    const vec_u8_t perm = {0 + N,  1 + N,  2 + N,  3 + N, 4 + N,  5 + N,
+                           6 + N,  7 + N,  8 + N,  9 + N, 10 + N, 11 + N,
+                           12 + N, 13 + N, 14 + N, 15 + N};
+
+    return vector_type(vec_perm(vec_u8_t(value), zero, perm));
+  }
+
+  uint16_t first() const { return value[0]; }
 };
 
 template <typename T> struct base16_numeric : base16<T> {

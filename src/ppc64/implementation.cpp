@@ -85,9 +85,9 @@ enum class ErrorReporting {
   #include "ppc64/ppc64_convert_utf32_to_utf16.cpp"
 #endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_UTF16
 
-#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_UTF32
+#if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_UTF8
   #include "ppc64/ppc64_convert_utf32_to_utf8.cpp"
-#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_UTF32
+#endif // SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_UTF8
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
   #include "ppc64/ppc64_utf8_length_from_latin1.cpp"
@@ -124,6 +124,7 @@ enum class ErrorReporting {
 #if SIMDUTF_FEATURE_UTF16
   #include "generic/utf16.h"
   #include "generic/validate_utf16.h"
+  #include "generic/utf16/to_well_formed.h"
 #endif // SIMDUTF_FEATURE_UTF16
 
 #if SIMDUTF_FEATURE_UTF32
@@ -240,14 +241,12 @@ implementation::validate_utf16be(const char16_t *buf,
 
 void implementation::to_well_formed_utf16le(const char16_t *input, size_t len,
                                             char16_t *output) const noexcept {
-  return scalar::utf16::to_well_formed_utf16<endianness::LITTLE>(input, len,
-                                                                 output);
+  utf16::to_well_formed<endianness::LITTLE>(input, len, output);
 }
 
 void implementation::to_well_formed_utf16be(const char16_t *input, size_t len,
                                             char16_t *output) const noexcept {
-  return scalar::utf16::to_well_formed_utf16<endianness::BIG>(input, len,
-                                                              output);
+  utf16::to_well_formed<endianness::BIG>(input, len, output);
 }
 
 simdutf_warn_unused result implementation::validate_utf16le_with_errors(
